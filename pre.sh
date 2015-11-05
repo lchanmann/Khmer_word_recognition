@@ -12,7 +12,7 @@ paste scripts/wavlist tmp/mfclist > scripts/wav2mfcc
 # feature extraction
 HCopy -T 3 -C configs/hcopy.conf -S scripts/wav2mfcc > logs/hcopy_pre.log
 
-# phoneme level label generation
+# word -> phoneme level label generation
 HLEd -T 1 -l '*/' -d dictionary.dct -i phoneme.mlf hled.cmd words.mlf > logs/hled.log
 
 # phoneme list generation
