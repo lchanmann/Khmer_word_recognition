@@ -1253,6 +1253,7 @@ wav/ps-soungsovathana-f-pcID-092.wav	mfcc/ps-soungsovathana-f-pcID-092.mfc
 wav/ps-soungsovathana-f-pcID-093.wav	mfcc/ps-soungsovathana-f-pcID-093.mfc
 wav/ps-soungsovathana-f-pcID-094.wav	mfcc/ps-soungsovathana-f-pcID-094.mfc
 wav/ps-soungsovathana-f-pcID-095.wav	mfcc/ps-soungsovathana-f-pcID-095.mfc
+wav/ps-soungsovathana-f-pcID-096.wav	mfcc/ps-soungsovathana-f-pcID-096.mfc
 wav/ps-soungsovathana-f-pcID-097.wav	mfcc/ps-soungsovathana-f-pcID-097.mfc
 wav/ps-soungsovathana-f-pcID-098.wav	mfcc/ps-soungsovathana-f-pcID-098.mfc
 wav/ps-soungsovathana-f-pcID-099.wav	mfcc/ps-soungsovathana-f-pcID-099.mfc
@@ -1351,7 +1352,6 @@ wav/ps-soungsovathana-f-pcID-191.wav	mfcc/ps-soungsovathana-f-pcID-191.mfc
 wav/ps-soungsovathana-f-pcID-192.wav	mfcc/ps-soungsovathana-f-pcID-192.mfc
 wav/ps-soungsovathana-f-pcID-193.wav	mfcc/ps-soungsovathana-f-pcID-193.mfc
 wav/ps-soungsovathana-f-pcID-194.wav	mfcc/ps-soungsovathana-f-pcID-194.mfc
-wav/ps-soungsovathana-f-pcID-195.wav	mfcc/ps-soungsovathana-f-pcID-195.mfc
 wav/pv-keapunleu-m-pcID-001.wav	mfcc/pv-keapunleu-m-pcID-001.mfc
 wav/pv-keapunleu-m-pcID-002.wav	mfcc/pv-keapunleu-m-pcID-002.mfc
 wav/pv-keapunleu-m-pcID-003.wav	mfcc/pv-keapunleu-m-pcID-003.mfc
@@ -2517,7 +2517,6 @@ wav/sr-thannphearum-m-pcID-191.wav	mfcc/sr-thannphearum-m-pcID-191.mfc
 wav/sr-thannphearum-m-pcID-192.wav	mfcc/sr-thannphearum-m-pcID-192.mfc
 wav/sr-thannphearum-m-pcID-193.wav	mfcc/sr-thannphearum-m-pcID-193.mfc
 wav/sr-thannphearum-m-pcID-194.wav	mfcc/sr-thannphearum-m-pcID-194.mfc
-wav/sr-thannphearum-m-pcID-195.wav	mfcc/sr-thannphearum-m-pcID-195.mfc
 wav/sv-chhutsimeth-m-pcID-001.wav	mfcc/sv-chhutsimeth-m-pcID-001.mfc
 wav/sv-chhutsimeth-m-pcID-002.wav	mfcc/sv-chhutsimeth-m-pcID-002.mfc
 wav/sv-chhutsimeth-m-pcID-003.wav	mfcc/sv-chhutsimeth-m-pcID-003.mfc
