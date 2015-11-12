@@ -16,7 +16,7 @@ paste scripts/wavlist scripts/mfclist > scripts/wav2mfcc
 HCopy -T 3 -C configs/hcopy.conf -S scripts/wav2mfcc > logs/hcopy_train.log
 
 # word -> phoneme level label generation
-HLEd -T 1 -l '*/' -d dictionary/dictionary.dct -i labels/phoneme.mlf edfile.led labels/words.mlf > logs/hled.log
+HLEd -T 1 -l '*/' -d dictionary/dictionary.dct -i labels/phoneme.mlf commands/edit.led labels/words.mlf > logs/hled.log
 
 # phoneme list generation
 cat labels/phoneme.mlf | grep '^[a-z]' | sort -u > phones/all.phe
@@ -28,9 +28,9 @@ echo -e '!ENTER\n!EXIT' >> dictionary/dictionary.wrd
 cp dictionary/dictionary.dct dictionary/dictionary.dct.withsil
 echo -e 'SIL\t[]\tsil' >> dictionary/dictionary.dct.withsil
 
-# bigram language model generation
-HLStats -T 1 -b lm/bigram.lm -o -t 1 dictionary/dictionary.wrd labels/words.mlf > logs/hlstats.log
-HBuild -T 1 -n lm/bigram.lm dictionary/dictionary.wrd lm/bigram.lat > logs/hbuild.log
+# # bigram language model generation
+# HLStats -T 1 -b lm/bigram.lm -o -t 1 dictionary/dictionary.wrd labels/words.mlf > logs/hlstats.log
+# HBuild -T 1 -n lm/bigram.lm dictionary/dictionary.wrd lm/bigram.lat > logs/hbuild.log
 
 # clean up
 rm -f tmp/*
