@@ -1,7 +1,7 @@
 # init.sh - HMM flat start initialization 
 
 # create required directories
-mkdir -p models/hmm_0 models/hmm_2
+mkdir -p models/hmm_0 models/hmm_1 models/hmm_2
 
 # flat-start initialization
 HCompV \
