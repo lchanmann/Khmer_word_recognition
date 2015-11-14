@@ -95,23 +95,24 @@ do
    > logs/herest_hmm_2.log
 done
 
-# 
-# HVite \
-#  -T 1 -a -l '*' -I mlf/khmerwrd.mlf -i mlf/khmeralgn.mlf \
-#  -C configs/hvite.cfg -m -b SIL -o SW -y lab \
-#  -S scripts/mfclist -H models/hmm_2/models.mmf dictionary/dictionary.dct.withsil phones/all.phe \
-#  > logs/hvite_hmm_2.log
+# viterbi alignment for mixture model
+HVite \
+ -T 1 -a -l '*' -I labels/words.mlf -i labels/phoneme_with_alignment.mlf \
+ -C configs/hvite.conf -m -b SIL -o SW -y lab \
+ -S scripts/mfclist -H models/hmm_2/models.mmf dictionary/dictionary.dct.withsil phones/all.phe \
+ > logs/hvite_hmm_2.log
 
-# HERest \
-#  -T 1 -H models/am2/models.mmf -M models/am2 \
-#  -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-#  -S scp/khmer.scp -I mlf/khmeralgn.mlf phe/khmer.phe \
-#  > models/am2/herest.log
-# HERest \
-#  -T 1 -H models/am2/models.mmf -M models/am2 \
-#  -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-#  -S scp/khmer.scp -I mlf/khmeralgn.mlf phe/khmer.phe \
-#  > models/am2/herest.log
+# 2x parameter re-estimation right after viterbi alignment
+HERest \
+   -T 1 -H models/hmm_2/models.mmf -M models/hmm_2 \
+   -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
+   -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+   > logs/herest_hmm_2.log
+HERest \
+   -T 1 -H models/hmm_2/models.mmf -M models/hmm_2 \
+   -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
+   -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+   > logs/herest_hmm_2.log
 
 # HVite \
 #  -T 1 -a -l '*' -I mlf/khmerwrd.mlf -i mlf/khmeralgn.mlf \
