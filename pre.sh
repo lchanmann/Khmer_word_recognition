@@ -21,12 +21,21 @@ HLEd -T 1 -l '*/' -d dictionary/dictionary.dct -i labels/phoneme.mlf commands/ed
 # phoneme list generation
 cat labels/phoneme.mlf | grep '^[a-z]' | sort -u > phones/all.phe
 cat phones/all.phe | grep -v '^sil' | sort -u > phones/all.phe.nosil
-cat labels/words.mlf | grep -v '^[#".]'| sort -u > dictionary/dictionary.wrd
+cat labels/words.mlf | grep -v '^[#".]' | sort -u > dictionary/dictionary.wrd
 echo -e '!ENTER\n!EXIT' >> dictionary/dictionary.wrd
 
 # dictionary.dct.withsil generation
 cp dictionary/dictionary.dct dictionary/dictionary.dct.withsil
 echo -e 'SIL\t[]\tsil' >> dictionary/dictionary.dct.withsil
+
+# generate task grammar
+cat labels/words.mlf | grep -v '^[#".]' | sort -u | perl -p -e 's/\n/ | /;' > tmp/words
+echo '$word = '$(cat tmp/words | sed 's/ | $/;/') > dictionary/grammar
+echo >> dictionary/grammar
+echo '(!ENTER $word !EXIT)' >> dictionary/grammar
+
+# convert task grammar into word network for recognizer
+HParse dictionary/grammar lm/word_network.lat
 
 # # bigram language model generation
 # HLStats -T 1 -b lm/bigram.lm -o -t 1 dictionary/dictionary.wrd labels/words.mlf > logs/hlstats.log
