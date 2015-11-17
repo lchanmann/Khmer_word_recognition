@@ -1,7 +1,7 @@
 # run_test.sh - run test on the estimated parameter of the HMM
 
 # create a clean container for test
-DIR=$(date +"%F.%H%M%S")
+DIR=$(date +"%F.%H%M")
 mkdir -p tests/$DIR
 rm -rf tests/$DIR/*
 
