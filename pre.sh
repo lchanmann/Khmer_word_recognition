@@ -6,14 +6,18 @@ WAV='wav'
 
 # create required directories
 mkdir -p mfcc lm tmp logs
+for n in `seq 1 1 14`
+do
+  mkdir -p mfcc/spkr$n
+done
 
-# generate scripts/wav2mfcc
-ls -1d $WAV/* > scripts/wavlist
+# generate script files
+ls -1d $WAV/*/* > scripts/wavlist
 sed -e "s/^$WAV\//mfcc\//" -e 's/.wav$/.mfc/' scripts/wavlist > scripts/mfclist
 paste scripts/wavlist scripts/mfclist > scripts/wav2mfcc
 
 # feature extraction
-HCopy -T 3 -C configs/hcopy.conf -S scripts/wav2mfcc > logs/hcopy_train.log
+HCopy -T 3 -C configs/hcopy.conf -S scripts/wav2mfcc > logs/hcopy.log
 
 # word -> phoneme level label generation
 HLEd -T 1 -l '*/' -d dictionary/dictionary.dct -i labels/phoneme.mlf commands/edit.led labels/words.mlf > logs/hled.log
@@ -42,4 +46,4 @@ HParse dictionary/grammar lm/word_network.lat
 # HBuild -T 1 -n lm/bigram.lm dictionary/dictionary.wrd lm/bigram.lat > logs/hbuild.log
 
 # clean up
-rm -f tmp/*
+rm -rf tmp/*
