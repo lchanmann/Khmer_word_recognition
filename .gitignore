@@ -8,3 +8,5 @@ mfcc/
 tmp/
 tests/
 nohup.out
+*copy/
+*.orig
