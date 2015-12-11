@@ -1,7 +1,25 @@
 # open_test.sh - run open test with one hold-out speaker
-# Usage:
-#         $ open_test.sh spkr1 # to hold-out spkr1 for testing
+#
 
-HOLDOUT=$1
+# setup directory
+mkdir -p tests
 
-bash -v ./pre.sh
+DIR=tests/$(date +"%F.%H%M").open_test
+mkdir -p $DIR
+rm -rf $DIR/*
+
+# bash -v ./pre.sh
+
+# leave one out
+for n in `seq 1 1 14`
+do
+  cat scripts/mfclist | grep -v "spkr$n/" > scripts/mfclist_leaveout_trn_$n
+  cat scripts/mfclist | grep "spkr$n/" > scripts/mfclist_leaveout_tst_$n
+
+  # parameter learning
+  bash -v ./init.sh scripts/mfclist_leaveout_trn_$n
+
+  # decoding
+  cp scripts/mfclist_leaveout_tst_$n $DIR/mfclist_$n
+  bash -v ./decode.sh $DIR $n
+done

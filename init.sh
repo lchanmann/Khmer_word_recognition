@@ -1,5 +1,13 @@
 # init.sh - HMM flat start initialization 
 
+# mfclist
+MFCLIST=scripts/mfclist
+if [ "$1" ]
+then
+  # scripts/mfclist_leaveout_trn_{k}
+  MFCLIST=$1
+fi
+
 # create required directories
 mkdir -p models/hmm_0 models/hmm_1 models/hmm_2
 
@@ -7,7 +15,7 @@ mkdir -p models/hmm_0 models/hmm_1 models/hmm_2
 HCompV \
  -T 1 -M models/hmm_0 \
  -C configs/hcompv.conf -m \
- -S scripts/mfclist models/proto \
+ -S $MFCLIST models/proto \
  > logs/hcompv_hmm_0.log
 
 # initialize each hmm with the global estimated mean and variance in HMM macro file
@@ -21,17 +29,17 @@ done
 HERest \
  -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
  -C configs/herest.conf -w 1 -t 240.0 120.0 1920.0 \
- -S scripts/mfclist -I labels/phoneme.mlf phones/all.phe \
+ -S $MFCLIST -I labels/phoneme.mlf phones/all.phe \
  > logs/herest_hmm_0.log
 HERest \
  -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
  -C configs/herest.conf -w 1 -t 180.0 90.0 1440.0 \
- -S scripts/mfclist -I labels/phoneme.mlf phones/all.phe \
+ -S $MFCLIST -I labels/phoneme.mlf phones/all.phe \
  > logs/herest_hmm_0.log
 HERest \
  -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
  -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S scripts/mfclist -I labels/phoneme.mlf phones/all.phe \
+ -S $MFCLIST -I labels/phoneme.mlf phones/all.phe \
  > logs/herest_hmm_0.log
 
 # update HMM parameters to fix silence model
@@ -44,19 +52,19 @@ HHEd \
 HERest \
  -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
  -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S scripts/mfclist -I labels/phoneme.mlf phones/all.phe \
+ -S $MFCLIST -I labels/phoneme.mlf phones/all.phe \
  > logs/herest_hmm_0.log
 HERest \
  -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
  -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S scripts/mfclist -I labels/phoneme.mlf phones/all.phe \
+ -S $MFCLIST -I labels/phoneme.mlf phones/all.phe \
  > logs/herest_hmm_0.log
 
 # viterbi alignment
 HVite \
  -T 1 -a -l '*' -I labels/words.mlf -i labels/phoneme_with_alignment.mlf \
  -C configs/hvite.conf -m -b SIL -o SW -y lab \
- -S scripts/mfclist -H models/hmm_0/models.mmf \
+ -S $MFCLIST -H models/hmm_0/models.mmf \
  dictionary/dictionary.dct.withsil phones/all.phe \
  > logs/hvite_hmm_0.log
 
@@ -64,12 +72,12 @@ HVite \
 HERest \
  -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
  -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+ -S $MFCLIST -I labels/phoneme_with_alignment.mlf phones/all.phe \
  > logs/herest_hmm_0.log
 HERest \
  -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
  -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+ -S $MFCLIST -I labels/phoneme_with_alignment.mlf phones/all.phe \
  > logs/herest_hmm_0.log
 
 # mixture models
@@ -85,13 +93,13 @@ do
   HERest \
    -T 1 -H models/hmm_2/models.mmf \
    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-   -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+   -S $MFCLIST -I labels/phoneme_with_alignment.mlf phones/all.phe \
    > logs/herest_hmm_2.log
 
   HERest \
    -T 1 -H models/hmm_2/models.mmf \
    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-   -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+   -S $MFCLIST -I labels/phoneme_with_alignment.mlf phones/all.phe \
    > logs/herest_hmm_2.log
 done
 
@@ -99,38 +107,38 @@ done
 HVite \
  -T 1 -a -l '*' -I labels/words.mlf -i labels/phoneme_with_alignment.mlf \
  -C configs/hvite.conf -m -b SIL -o SW -y lab \
- -S scripts/mfclist -H models/hmm_2/models.mmf dictionary/dictionary.dct.withsil phones/all.phe \
+ -S $MFCLIST -H models/hmm_2/models.mmf dictionary/dictionary.dct.withsil phones/all.phe \
  > logs/hvite_hmm_2.log
 
 # 2x parameter re-estimation right after viterbi alignment
 HERest \
    -T 1 -H models/hmm_2/models.mmf -M models/hmm_2 \
    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-   -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+   -S $MFCLIST -I labels/phoneme_with_alignment.mlf phones/all.phe \
    > logs/herest_hmm_2.log
 HERest \
    -T 1 -H models/hmm_2/models.mmf -M models/hmm_2 \
    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-   -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+   -S $MFCLIST -I labels/phoneme_with_alignment.mlf phones/all.phe \
    > logs/herest_hmm_2.log
 
 # viterbi alignment one more time
 HVite \
  -T 1 -a -l '*' -I labels/words.mlf -i labels/phoneme_with_alignment.mlf \
  -C configs/hvite.conf -m -b SIL -o SW -y lab \
- -S scripts/mfclist -H models/hmm_2/models.mmf dictionary/dictionary.dct.withsil phones/all.phe \
+ -S $MFCLIST -H models/hmm_2/models.mmf dictionary/dictionary.dct.withsil phones/all.phe \
  > logs/hvite_hmm_2.log
 
 # 2x parameter re-estimation right after viterbi alignment
 HERest \
    -T 1 -H models/hmm_2/models.mmf -M models/hmm_2 \
    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-   -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+   -S $MFCLIST -I labels/phoneme_with_alignment.mlf phones/all.phe \
    > logs/herest_hmm_2.log
 HERest \
    -T 1 -H models/hmm_2/models.mmf -M models/hmm_2 \
    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-   -S scripts/mfclist -I labels/phoneme_with_alignment.mlf phones/all.phe \
+   -S $MFCLIST -I labels/phoneme_with_alignment.mlf phones/all.phe \
    > logs/herest_hmm_2.log
 
 # use hmm_2/models.mmf as main MMF
