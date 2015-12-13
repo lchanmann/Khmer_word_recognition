@@ -8,13 +8,12 @@ DIR=tests/$(date +"%F.%H%M")
 mkdir -p $DIR
 rm -rf $DIR/*
 
-# bash -v ./pre.sh
 # parameter learning
 bash -v ./init.sh
 
 # split mfclist for parallel processing
 P=4
-split -l $(echo `grep ".*" -c scripts/mfclist`/$P+1 | bc) scripts/mfclist tests/$DIR/mfclist_
+split -l $(echo `grep ".*" -c scripts/mfclist`/$P+1 | bc) scripts/mfclist $DIR/mfclist_
 # use numeric part sequence for splited mfclist
 n=0
 ls -1d $DIR/mfclist_* | while read line
@@ -26,5 +25,5 @@ done
 # execute decode.sh parallelly in the background
 for p in `seq 1 1 $P`
 do
-  nohup bash -v decode.sh $DIR $p &
+  nohup bash -v decode.sh $DIR $p models/models.mmf &
 done
