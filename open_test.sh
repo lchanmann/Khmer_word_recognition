@@ -19,7 +19,10 @@ do
   # parameter learning
   bash -v ./init.sh scripts/mfclist_leaveout_trn_$n
 
-  # decoding
+  # copy hmm models and mfclist to test container
+  cp models/models.mmf $DIR/models$n.mmf
   cp scripts/mfclist_leaveout_tst_$n $DIR/mfclist_$n
-  bash -v ./decode.sh $DIR $n
+
+  # decoding
+  nohup bash -v ./decode.sh $DIR $n &
 done
