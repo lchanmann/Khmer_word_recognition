@@ -11,7 +11,7 @@ rm -rf $DIR/*
 # parameter learning
 bash -v ./init.sh
 
-# split mfclist for parallel processing
+# split mfclist for four parallel processing threads
 P=4
 split -l $(echo `grep ".*" -c scripts/mfclist`/$P+1 | bc) scripts/mfclist $DIR/mfclist_
 # use numeric part sequence for splited mfclist
