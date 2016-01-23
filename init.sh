@@ -4,7 +4,7 @@
 MFCLIST=scripts/mfclist
 if [ "$1" ]
 then
-  # scripts/mfclist_leaveout_trn_{k}
+  # $1 = [scripts/mfclist_leaveout_trn_{k} | scripts/mfclist_trn]
   MFCLIST=$1
 fi
 

@@ -8,7 +8,8 @@ DIR=tests/$(date +"%F.%H%M").open_test
 mkdir -p $DIR
 rm -rf $DIR/*
 
-# bash -v ./pre.sh
+# pre-processing
+bash -v ./pre.sh
 
 # leave one out
 for n in `seq 1 1 14`
