@@ -9,7 +9,7 @@ mkdir -p $DIR
 rm -rf $DIR/*
 
 # pre-processing
-bash -v ./pre.sh
+# bash -v ./pre.sh
 
 # leave one out
 for n in `seq 1 1 14`

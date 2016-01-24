@@ -6,7 +6,6 @@ mkdir -p tests
 # create a clean container for test
 DIR=tests/$(date +"%F.%H%M")
 mkdir -p $DIR
-rm -rf $DIR/*
 
 MALES=( 3 4 6 8 9 10 13 14 )
 FEMALES=( 1 2 5 7 11 12 )
