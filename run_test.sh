@@ -46,7 +46,7 @@ do
 done
 
 # hmmlist for triphone
-if [ "$model" -eq "triphone" ]; then
+if [ "$model" == "triphone" ]; then
   hmmlist=phones/khmer_tied_triphone.phe
 fi
 
