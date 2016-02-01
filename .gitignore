@@ -10,3 +10,4 @@ tests/
 nohup.out
 *copy/
 *.orig
+experiments/

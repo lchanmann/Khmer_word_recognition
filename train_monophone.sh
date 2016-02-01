@@ -1,18 +1,110 @@
-# train_monophone.sh - train monophone model
-#
-#   $1 : mfclist
+#!/bin/sh
 
-# error on using unset variable
-set -u
+# -----------------------------------
+# Project   : Khmer_word_recognition
+# Author    : Chanmann Lim
+#
+# Changelogs:
+#   - 01/29/2016  : refactoring.
+# -----------------------------------
+
 # exit on error
 set -e
 
-# define variables
-mfclist=$1
+# E_VARS
+E_USAGE="Usage: $0 \$mfclist_trn"
+
+# check for required argument
+if [ "$#" -ne "1" ]; then
+  echo $E_USAGE >&2
+  exit 1
+fi
+
+# global variables
+SCRIPT_NAME=$0
+MFCLIST=
+DIR=
+MIXTURES=16
+
+# setup
+setup() {
+  MFCLIST=$1
+  DIR=$(dirname $1)
+
+  # stdout
+  echo "$SCRIPT_NAME -> setup()"
+  echo "  MFCLIST: $MFCLIST"
+  echo "  DIR: $DIR"
+  echo
+}
+
+# make phoneme.mlf
+make_phoneme_mlf() {
+  echo "$SCRIPT_NAME -> make_phoneme_mlf()"
+  echo "  deps:"
+  echo "    - dictionary/dictionary.dct"
+  echo "    - ed_files/mkphn.led"
+  echo "    - labels/words.mlf"
+  echo "  writeTo: $DIR/phoneme.mlf"
+  echo
+
+  # word -> phoneme level label generation
+  HLEd -T 1 -l '*/' \
+    -i $DIR/phoneme.mlf \
+    -d dictionary/dictionary.dct \
+    ed_files/mkphn.led labels/words.mlf > $DIR/make_phoneme.hled.log
+}
+
+# make hmmlist
+make_hmmlist() {
+  echo "$SCRIPT_NAME -> make_hmmlist()"
+  echo "  deps:"
+  echo "    - $DIR/phoneme.mlf"
+  echo "  output: $DIR/hmmlist"
+  echo
+
+  # phone set generation
+  cat $DIR/phoneme.mlf \
+    | grep '^[a-z]' \
+    | sort -u > $DIR/hmmlist
+  # cat $DIR/hmmlist \
+  #   | grep -v '^sil' \
+  #   | sort -u > $DIR/hmmlist.nosil
+}
 
 # initialize models
-bash -v ./init.sh $mfclist
+initialize() {
+  echo "$SCRIPT_NAME -> initialize()"
+  echo "  deps:"
+  echo "    - init.sh"
+  echo "    - $DIR"
+  echo "  output: $DIR/models/models.mmf"
+  echo
 
-# use mixture models
-cp models/hmm_0/models.mmf models/hmm_2/models.mmf
-bash -v ./increase_mixture.sh $mfclist phones/khmer.phe
+  bash ./init.sh $DIR
+  cp $DIR/models/models.mmf $DIR/models/gmm_1_hmm
+}
+
+# tune with mixture models
+models_tuning() {
+  echo "$SCRIPT_NAME -> models_tuning()"
+  echo "  deps:"
+  echo "    - increase_mixture.sh"
+  echo "    - $DIR"
+  echo "  output: $DIR/models/models.mmf"
+  echo
+  
+  bash ./increase_mixture.sh $MIXTURES "$DIR"
+}
+
+# ------------------------------------
+# train_monophone.sh - train monophone models
+#
+#   $1 : MFCLIST
+# ------------------------------------
+
+  setup $1
+  make_phoneme_mlf
+  make_hmmlist
+  initialize
+  models_tuning

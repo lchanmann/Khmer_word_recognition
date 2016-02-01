@@ -1,27 +1,110 @@
-# decode.sh - decode with viterbi algorithm and generate hypothesis results
+#!/bin/sh
 
-# error on using unset variable
-set -u
+# -----------------------------------
+# Project   : Khmer_word_recognition
+# Author    : Chanmann Lim
+#
+# Changelogs:
+#   - 01/31/2016  : refactoring.
+# -----------------------------------
+
 # exit on error
 set -e
 
-# define variables
-DIR=$1
-P=$2
-MODELS=$3
-HMMLIST=$4
+# E_VARS
+E_USAGE="Usage: $0 \$directory"
+
+# check for required argument
+if [ "$#" -ne "1" ]; then
+  echo $E_USAGE >&2
+  exit 1
+fi
+
+# global variables
+SCRIPT_NAME=$0
+DIR=
+HMMLIST=
+MFCLIST=
+
+# setup directory
+setup() {
+  DIR="$1"
+  HMMLIST="$DIR/hmmlist"
+  MFCLIST="$DIR/mfclist_tst"
+
+  mkdir -p $DIR/results
+
+  # stdout
+  echo "$SCRIPT_NAME -> setup()"
+  echo 
+}
 
 # viterbi decoding
-HVite \
- -T 1 -l '*' -i $DIR/output_$P.mlf \
- -z zoo -q Atvaldmnr -s 2.4 -p -1.2 \
- -S $1/mfclist_$2 -H $MODELS -w lm/word_network.lat \
- dictionary/dictionary.dct $HMMLIST > $DIR/$P.log
+viterbi_decode() {
+  echo "$SCRIPT_NAME -> viterbi_decode()"
+  echo "  \$models: $1"
+  echo
 
-# collect viterbi scores
-cat $1/output_$2.mlf >> $1/hypothesis.mlf
+  local models=$1
+  local num=$(basename $models | sed -e "s/gmm_//" -e "s/_hmm.mmf//")
 
-# generate result statistics
-HResults \
- -f -I labels/words.mlf /dev/null $1/hypothesis.mlf \
- > $1/result.log
+  # viterbi decoding
+  HVite \
+    -T 1 -l '*' -i $DIR/results/output_${num}.mlf \
+    -z zoo -q Atvaldmnr -s 2.4 -p -1.2 \
+    -S $MFCLIST -H $models -w lm/word_network.lat \
+    dictionary/dictionary.dct $HMMLIST > $DIR/results/hvite_${num}.log
+
+  # generate result statistics
+  HResults \
+    -f -I labels/words.mlf /dev/null $DIR/results/output_${num}.mlf \
+    > $DIR/results/result_${num}.log
+}
+
+# recognize
+recognize() {
+  ls -1d $DIR/models/*hmm.mmf | while read mmf; do
+    viterbi_decode $mmf &
+  done
+}
+
+# show progress
+show_progress() {
+  local M=$(ls $DIR/models | grep -c "hmm.mmf")
+  local testSet=$(cat $DIR/mfclist_tst | grep -c "")
+  local total=$(( M*(testSet*2+3) ))
+  local current=
+  local progress=
+  local progressBar=
+  local dot="...................................................................................................."
+  local refreshInterval=2
+
+  while true; do
+    current=$(cat $DIR/results/hvite_*.log | grep -c "")
+    progress=$((current*100/total))
+
+    progressBar="$dot ($progress%%)"
+    if [ $progress -gt 0 ]; then
+      progressBar=$(echo $progressBar | sed "s/./#/$progress"); fi
+    printf "$progressBar\r"
+
+    if [ "$progress" == "100" ]; then
+      break; fi
+    sleep $refreshInterval
+  done
+
+  echo
+  echo "Done!"
+  echo
+}
+
+# -----------------------------------
+# decode.sh - decode with viterbi algorithm 
+#             and generate hypothesis results
+#
+#   $1 : $DIR
+# -----------------------------------
+
+  setup $1
+  recognize
+  show_progress

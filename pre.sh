@@ -19,14 +19,14 @@ paste scripts/wavlist scripts/mfclist > scripts/wav2mfcc
 # feature extraction
 HCopy -T 3 -C configs/hcopy.conf -S scripts/wav2mfcc > logs/hcopy.log
 
-# word -> phoneme level label generation
-HLEd -T 1 -l '*/' 
- -d dictionary/dictionary.dct -i labels/phoneme.mlf \
- commands/mkphn.led labels/words.mlf > logs/hled.log
+# # word -> phoneme level label generation
+# HLEd -T 1 -l '*/' 
+#  -d dictionary/dictionary.dct -i labels/phoneme.mlf \
+#  commands/mkphn.led labels/words.mlf > logs/hled.log
 
-# phoneme list generation
-cat labels/phoneme.mlf | grep '^[a-z]' | sort -u > phones/khmer.phe
-cat phones/khmer.phe | grep -v '^sil' | sort -u > phones/khmer.phe.nosil
+# # phoneme list generation
+# cat labels/phoneme.mlf | grep '^[a-z]' | sort -u > phones/khmer.phe
+# cat phones/khmer.phe | grep -v '^sil' | sort -u > phones/khmer.phe.nosil
 
 # vocabulary extraction
 cat labels/words.mlf | grep -v '^[#".]' | sort -u > dictionary/dictionary.wrd

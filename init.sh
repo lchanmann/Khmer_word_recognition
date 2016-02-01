@@ -1,86 +1,152 @@
-# init.sh - HMM flat start initialization 
+#!/bin/sh
+
+# -----------------------------------
+# Project   : Khmer_word_recognition
+# Author    : Chanmann Lim
+#
+# Changelogs:
+#   - 01/29/2016  : refactoring.
+# -----------------------------------
 
 # exit on error
 set -e
 
-# mfclist
-mfclist=scripts/mfclist
-if [ "$1" ]; then
-  # $1 = [scripts/mfclist_leaveout_trn_{k} | scripts/mfclist_trn]
-  mfclist=$1
+# E_VARS
+E_USAGE="Usage: $0 \$directory"
+# E_FILES_NOT_FOUND="Error: Required files could not be found."
+
+# check for required argument
+if [ "$#" -ne "1" ]; then
+  echo $E_USAGE >&2
+  exit 1
 fi
 
-# create required directories
-#   models/hmm_0 : initail model
-#   models/hmm_1 : triphone model
-#   models/hmm_2 : monophone model
-mkdir -p models/hmm_0 models/hmm_1 models/hmm_2
+# global variables
+SCRIPT_NAME=$0
+DIR=
+MFCLIST=
+HMMLIST=
+PHONEME_MLF=
+MODELS_MMF=
 
-# flat-start initialization
-HCompV \
- -T 1 -M models/hmm_0 \
- -C configs/hcompv.conf -m \
- -S $mfclist models/proto \
- > logs/hcompv_hmm_0.log
+# setup
+setup() {
+  DIR=$1
+  MFCLIST="$DIR/mfclist_trn"
+  HMMLIST="$DIR/hmmlist"
+  PHONEME_MLF="$DIR/phoneme.mlf"
+  MODELS_MMF="$DIR/models/models.mmf"
 
-# initialize each hmm with the global estimated mean and variance in HMM macro file
-head -n 3 models/hmm_0/proto > models/hmm_0/models.mmf
-for phone in `cat phones/khmer.phe`
-do
- tail -n 28 models/hmm_0/proto | sed -e 's/~h \"proto\"/~h \"'$phone'\"/g' >> models/hmm_0/models.mmf
-done
+  mkdir $DIR/models
 
-# Baum-Welch parameter re-estimation for 3 iterations
-HERest \
- -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
- -C configs/herest.conf -w 1 -t 240.0 120.0 1920.0 \
- -S $mfclist -I labels/phoneme.mlf phones/khmer.phe \
- > logs/herest_hmm_0.log
-HERest \
- -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
- -C configs/herest.conf -w 1 -t 180.0 90.0 1440.0 \
- -S $mfclist -I labels/phoneme.mlf phones/khmer.phe \
- > logs/herest_hmm_0.log
-HERest \
- -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
- -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S $mfclist -I labels/phoneme.mlf phones/khmer.phe \
- > logs/herest_hmm_0.log
+  # stdout
+  echo "$SCRIPT_NAME -> setup()"
+  echo
+}
 
-# update HMM parameters to fix silence model
-HHEd \
- -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
- commands/sil.hed phones/khmer.phe \
- > logs/hhed_hmm_0.log
+# flat-start
+flat_start() {
+  echo "$SCRIPT_NAME -> flat_start()"
+  echo "  HCompV: y"
+  echo "  HERest: 3x"
+  echo
 
-# 2x parameter re-estimation right after fixing silence model
-HERest \
- -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
- -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S $mfclist -I labels/phoneme.mlf phones/khmer.phe \
- > logs/herest_hmm_0.log
-HERest \
- -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
- -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S $mfclist -I labels/phoneme.mlf phones/khmer.phe \
- > logs/herest_hmm_0.log
+  # flat-start initialization
+  HCompV \
+    -T 1 -M $DIR/models \
+    -C configs/hcompv.conf -m \
+    -S $MFCLIST models/proto > $DIR/models/hcompv.log
+
+   # initialize each hmm with the global estimated mean and variance in HMM macro file
+  head -n 3 $DIR/models/proto > $MODELS_MMF
+  for phone in $(cat $HMMLIST); do
+    tail -n 28 $DIR/models/proto \
+      | sed -e 's/~h \"proto\"/~h \"'$phone'\"/g' >> $MODELS_MMF
+  done
+
+  # Baum-Welch parameter re-estimation for 3 iterations
+  HERest \
+    -T 1 -H $MODELS_MMF \
+    -C configs/herest.conf -w 1 -t 240.0 120.0 1920.0 \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
+    > $DIR/models/herest_hmm.log
+
+  HERest \
+    -T 1 -H $MODELS_MMF \
+    -C configs/herest.conf -w 1 -t 180.0 90.0 1440.0 \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
+    > $DIR/models/herest_hmm.log
+
+  HERest \
+    -T 1 -H $MODELS_MMF \
+    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
+    > $DIR/models/herest_hmm.log
+}
+
+# fix sil model
+fix_sil() {
+  echo "$SCRIPT_NAME -> fix_sil()"
+  echo "  HHEd: y"
+  echo "  HERest: 2x"
+  echo
+
+  # update HMM parameters to fix silence model
+  HHEd \
+    -T 1 -H $MODELS_MMF \
+    ed_files/fix_sil.hed $HMMLIST \
+    > $DIR/models/hhed_hmm.log
+
+  # 2x parameter re-estimation right after fixing silence model
+  HERest \
+    -T 1 -H $MODELS_MMF \
+    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
+    > $DIR/models/herest_hmm.log
+
+  HERest \
+    -T 1 -H $MODELS_MMF \
+    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
+    > $DIR/models/herest_hmm.log
+}
 
 # viterbi alignment
-HVite \
- -T 1 -a -l '*' -I labels/words.mlf -i labels/phoneme_with_alignment.mlf \
- -C configs/hvite.conf -m -b SIL -o SW -y lab \
- -S $mfclist -H models/hmm_0/models.mmf \
- dictionary/dictionary.dct.withsil phones/khmer.phe \
- > logs/hvite_hmm_0.log
+viterbi_align() {
+  echo "$SCRIPT_NAME -> viterbi_align()"
+  echo "  HVite: y"
+  echo "  HERest: 2x"
+  echo
 
-# 2x parameter re-estimation right after viterbi alignment
-HERest \
- -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
- -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S $mfclist -I labels/phoneme_with_alignment.mlf phones/khmer.phe \
- > logs/herest_hmm_0.log
-HERest \
- -T 1 -H models/hmm_0/models.mmf -M models/hmm_0 \
- -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
- -S $mfclist -I labels/phoneme_with_alignment.mlf phones/khmer.phe \
- > logs/herest_hmm_0.log
+  # viterbi alignment
+  HVite \
+    -T 1 -a -l '*' -I labels/words.mlf -i $DIR/phoneme_with_alignment.mlf \
+    -C configs/hvite.conf -m -b SIL -o SW -y lab \
+    -S $MFCLIST -H $MODELS_MMF \
+    dictionary/dictionary.dct.withsil $HMMLIST \
+    > $DIR/models/hvite_hmm.log
+
+  # 2x parameter re-estimation right after viterbi alignment
+  HERest \
+    -T 1 -H $MODELS_MMF \
+    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
+    > $DIR/models/herest_hmm.log
+  
+  HERest \
+    -T 1 -H $MODELS_MMF \
+    -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
+    > $DIR/models/herest_hmm.log
+}
+ 
+# ------------------------------------
+# init.sh - HMM flat start initialization 
+#
+#   $1 : MFCLIST
+# ------------------------------------
+
+  setup $1 && \
+  flat_start && \
+  fix_sil && \
+  viterbi_align
