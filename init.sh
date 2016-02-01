@@ -146,7 +146,7 @@ viterbi_align() {
 #   $1 : MFCLIST
 # ------------------------------------
 
-  setup $1 && \
-  flat_start && \
-  fix_sil && \
+  setup $1
+  flat_start
+  fix_sil
   viterbi_align

@@ -5,7 +5,7 @@
 # Author    : Chanmann Lim
 #
 # Changelogs:
-#   - 01/29/2016  : refactoring.
+#   - 01/30/2016  : refactoring.
 # -----------------------------------
 
 # exit on error
@@ -82,7 +82,7 @@ initialize() {
   echo
 
   bash ./init.sh $DIR
-  cp $DIR/models/models.mmf $DIR/models/gmm_1_hmm
+  cp $DIR/models/models.mmf $DIR/models/gmm_1_hmm.mmf
 }
 
 # tune with mixture models
