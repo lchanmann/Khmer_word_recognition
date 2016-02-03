@@ -20,7 +20,7 @@ MFCLIST=
 DIR=
 PHONEME_MLF=
 TRIPHONE_MLF=
-PHONEME_WITH_ALIGNMENT=
+PHONEME_WITH_ALIGNMENT_MLF=
 MODELS_MMF=
 MONOPHONE_MMF=
 STATSFILE=
@@ -42,7 +42,7 @@ setup() {
   DIR=$(dirname $1)
   PHONEME_MLF="$DIR/phoneme.mlf"
   TRIPHONE_MLF="$DIR/triphone.mlf"
-  PHONEME_WITH_ALIGNMENT="$DIR/phoneme_with_alignment.mlf"
+  PHONEME_WITH_ALIGNMENT_MLF="$DIR/phoneme_with_alignment.mlf"
   MODELS_MMF="$DIR/models/models.mmf"
   MONOPHONE_MMF="$DIR/models/monophone.mmf"
   STATSFILE="$DIR/khmer_triphone.sta"
@@ -228,7 +228,7 @@ viterbi_align() {
 
   # viterbi alignment
   HVite \
-    -T 1 -a -l '*' -I labels/words.mlf -i $PHONME_WITH_ALIGNMENT \
+    -T 1 -a -l '*' -I labels/words.mlf -i $PHONEME_WITH_ALIGNMENT_MLF \
     -C configs/hvite.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
     dictionary/dictionary.dct.withsil $HMMLIST \

@@ -27,6 +27,7 @@ DIR=
 MFCLIST=
 HMMLIST=
 PHONEME_MLF=
+PHONEME_WITH_ALIGNMENT_MLF=
 MODELS_MMF=
 
 # setup
@@ -35,6 +36,7 @@ setup() {
   MFCLIST="$DIR/mfclist_trn"
   HMMLIST="$DIR/hmmlist"
   PHONEME_MLF="$DIR/phoneme.mlf"
+  PHONEME_WITH_ALIGNMENT_MLF="$DIR/phoneme_with_alignment.mlf"
   MODELS_MMF="$DIR/models/models.mmf"
 
   mkdir -p $DIR/models
@@ -120,7 +122,7 @@ viterbi_align() {
 
   # viterbi alignment
   HVite \
-    -T 1 -a -l '*' -I labels/words.mlf -i $DIR/phoneme_with_alignment.mlf \
+    -T 1 -a -l '*' -I labels/words.mlf -i $PHONEME_WITH_ALIGNMENT_MLF \
     -C configs/hvite.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
     dictionary/dictionary.dct.withsil $HMMLIST \

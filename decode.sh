@@ -14,20 +14,20 @@ set -e
 # E_VARS
 E_USAGE="Usage: $0 \$directory"
 
-# check for required argument
-if [ "$#" -ne "1" ]; then
-  echo $E_USAGE >&2
-  exit 1
-fi
-
 # global variables
 SCRIPT_NAME=$0
 DIR=
 HMMLIST=
 MFCLIST=
 
+# show usage
+show_usage() {
+  echo $E_USAGE >&2
+}
+
 # setup directory
 setup() {
+  bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   DIR="$1"
   HMMLIST="$DIR/hmmlist"
   MFCLIST="$DIR/mfclist_tst"

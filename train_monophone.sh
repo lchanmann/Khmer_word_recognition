@@ -14,20 +14,20 @@ set -e
 # E_VARS
 E_USAGE="Usage: $0 \$mfclist_trn"
 
-# check for required argument
-if [ "$#" -ne "1" ]; then
-  echo $E_USAGE >&2
-  exit 1
-fi
-
 # global variables
 SCRIPT_NAME=$0
 MFCLIST=
 DIR=
 MIXTURES=16
 
+# show usage
+show_usage() {
+  echo $E_USAGE >&2
+}
+
 # setup
 setup() {
+  bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   MFCLIST=$1
   DIR=$(dirname $1)
 
@@ -67,9 +67,6 @@ make_hmmlist() {
   cat $DIR/phoneme.mlf \
     | grep '^[a-z]' \
     | sort -u > $DIR/hmmlist
-  # cat $DIR/hmmlist \
-  #   | grep -v '^sil' \
-  #   | sort -u > $DIR/hmmlist.nosil
 }
 
 # initialize models

@@ -49,10 +49,10 @@ HParse dictionary/grammar lm/word_network.lat
 # HLStats -T 1 -b lm/bigram.lm -o -t 1 dictionary/dictionary.wrd labels/words.mlf > logs/hlstats.log
 # HBuild -T 1 -n lm/bigram.lm dictionary/dictionary.wrd lm/bigram.lat > logs/hbuild.log
 
-# phoneme -> triphone labels generation
-HLEd -T 1 -l '*/' \
- -i labels/triphone.mlf -n phones/khmer_triphone.phe \
- commands/mktri.led labels/phoneme.mlf > logs/hled.log
+# # phoneme -> triphone labels generation
+# HLEd -T 1 -l '*/' \
+#  -i labels/triphone.mlf -n phones/khmer_triphone.phe \
+#  commands/mktri.led labels/phoneme.mlf > logs/hled.log
 
 # # triphone list generation
 # perl pl/mkful.pl phones/khmer.phe.nosil > phones/khmer_triphone_redund.phe

@@ -121,5 +121,5 @@ make_mixtures() {
 #   $1 : MFCLIST
 # -----------------------------------
 
-  setup 16 experiments/triphone # $@
+  setup $@
   make_mixtures

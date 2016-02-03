@@ -5,6 +5,7 @@
 # Author    : Chanmann Lim
 #
 # Changelogs:
+#   - 02/03/2016  : use args_check.sh
 #   - 01/29/2016  : file created.
 # -----------------------------------
 
@@ -14,21 +15,21 @@ set -e
 # E_VARS
 E_USAGE="Usage: $0 (triphone | monophone)"
 
-# check for required argument
-if [ "$#" -ne "1" ]; then
-  echo $E_USAGE >&2
-  exit 1
-fi
-
 # global variables
 MODEL=
 DIR=
 
+# show usage
+show_usage() {
+  echo $E_USAGE >&2
+}
+
 # setup directory
 setup() {
+  bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   local dir=experiments/$(date +"%F.%H%M").$1
 
-  if [ ! -d "$dir" ]; then \
+  if [ ! -e "$dir" ]; then \
     mkdir -p "$dir"; fi
 
   DIR="$dir"
