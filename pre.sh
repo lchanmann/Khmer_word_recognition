@@ -54,18 +54,18 @@ HLEd -T 1 -l '*/' \
  -i labels/triphone.mlf -n phones/khmer_triphone.phe \
  commands/mktri.led labels/phoneme.mlf > logs/hled.log
 
-# triphone list generation
-perl pl/mkful.pl phones/khmer.phe.nosil > phones/khmer_triphone_redund.phe
-perl pl/mkuniq.pl phones/khmer_tri_redund.phe phones/khmer_triphone_all.phe
+# # triphone list generation
+# perl pl/mkful.pl phones/khmer.phe.nosil > phones/khmer_triphone_redund.phe
+# perl pl/mkuniq.pl phones/khmer_tri_redund.phe phones/khmer_triphone_all.phe
 
-# phonetic question set generation for triphone clustering
-perl pl/mktrihed.pl phones/khmer.phe phones/khmer_triphone.phe > commands/khmer_mktri.hed
-cat commands/khmer_comtrehead.hed > commands/khmer_comtre.hed
-perl pl/mktrehed.pl TB 480.0 phones/khmer.phe >> commands/khmer_comtre.hed
-echo -e '\nTR 1' >> commands/khmer_comtre.hed
-echo -e '\nAU phones/khmer_triphone_all.phe' >> commands/khmer_comtre.hed
-echo -e '\nST khmer_com.tre' >> commands/khmer_comtre.hed
-echo -e '\nCO phones/khmer_tied_triphone.phe' >> commands/khmer_comtre.hed
+# # phonetic question set generation for triphone clustering
+# perl pl/mktrihed.pl phones/khmer.phe phones/khmer_triphone.phe > commands/khmer_mktri.hed
+# cat commands/khmer_comtrehead.hed > commands/khmer_comtre.hed
+# perl pl/mktrehed.pl TB 480.0 phones/khmer.phe >> commands/khmer_comtre.hed
+# echo -e '\nTR 1' >> commands/khmer_comtre.hed
+# echo -e '\nAU phones/khmer_triphone_all.phe' >> commands/khmer_comtre.hed
+# echo -e '\nST khmer_com.tre' >> commands/khmer_comtre.hed
+# echo -e '\nCO phones/khmer_tied_triphone.phe' >> commands/khmer_comtre.hed
 
 # clean up
 rm -rf tmp/*

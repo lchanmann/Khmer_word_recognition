@@ -37,7 +37,7 @@ setup() {
   PHONEME_MLF="$DIR/phoneme.mlf"
   MODELS_MMF="$DIR/models/models.mmf"
 
-  mkdir $DIR/models
+  mkdir -p $DIR/models
 
   # stdout
   echo "$SCRIPT_NAME -> setup()"

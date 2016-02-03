@@ -18,7 +18,7 @@
 #
 
 if ( $#ARGV != 2 ) {
-   die "usage: mkclscript.prl command threshold monophone_list\n";
+   die "usage: mktrehed.pl command threshold monophone_list\n";
 }
 
 $command = $ARGV[0];
@@ -26,7 +26,7 @@ $threshold = $ARGV[1];
 
 $hmmlist=$ARGV[2];
 if (! -f $hmmlist) {
-   die "mkclscript: monophone HMM list $hmmlist not found\n";
+   die "mktrehed: monophone HMM list $hmmlist not found\n";
 }
 
 open(HMMLIST,"<$hmmlist") or die "Can't open file $hmmlist\n";

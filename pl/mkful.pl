@@ -7,7 +7,7 @@
 #
 
 if ( $#ARGV != 0 ) {
-    die "usage: full_list.prl monophones_list.\n";
+    die "usage: mkful.pl monophones_list.\n";
 }
 
 $datfile = $ARGV[0];
