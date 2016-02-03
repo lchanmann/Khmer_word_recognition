@@ -14,16 +14,12 @@ set -e
 # E_VARS
 E_USAGE="Usage: $0 \$mfclist_trn"
 
-# # check for required argument
-# if [ "$#" -ne "1" ]; then
-#   echo $E_USAGE >&2
-#   exit 1
-# fi
-
 # global variables
 SCRIPT_NAME=$0
 MFCLIST=
 DIR=
+PHONEME_MLF=
+TRIPHONE_MLF=
 MODELS_MMF=
 MONOPHONE_MMF=
 STATSFILE=
@@ -43,11 +39,14 @@ setup() {
   bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   MFCLIST=$1
   DIR=$(dirname $1)
+  PHONEME_MLF="$DIR/phoneme.mlf"
+  TRIPHONE_MLF="$DIR/triphone.mlf"
   MODELS_MMF="$DIR/models/models.mmf"
   MONOPHONE_MMF="$DIR/models/monophone.mmf"
   STATSFILE="$DIR/khmer_triphone.sta"
   HMMLIST="$DIR/hmmlist"
   CDLIST="$DIR/cdlist"
+  TIED_CDLIST="$DIR/tied_cdlist"
   MKTRI_HED="$DIR/mktri.hed"
   MKTREE_HED="$DIR/mktree.hed"
 
@@ -61,19 +60,19 @@ setup() {
 make_hmmlist() {
   echo "$SCRIPT_NAME -> make_hmmlist()"
   echo "  HLEd: y"
-  echo "  write: $DIR/phoneme.mlf"
+  echo "  write: $PHONEME_MLF"
   echo "  write: $HMMLIST"
   echo "  write: $HMMLIST.nosil"
   echo
 
   # word -> phoneme level label generation
   HLEd -T 1 -l '*/' \
-    -i $DIR/phoneme.mlf \
+    -i $PHONEME_MLF \
     -d dictionary/dictionary.dct \
     ed_files/mkphn.led labels/words.mlf > $DIR/hled_make_hmmlist.log
 
   # phone set generation
-  cat $DIR/phoneme.mlf \
+  cat $PHONEME_MLF \
     | grep '^[a-z]' \
     | sort -u > $HMMLIST
   cat $HMMLIST \
@@ -85,14 +84,14 @@ make_hmmlist() {
 make_cdlist() {
   echo "$SCRIPT_NAME -> make_cdlist()"
   echo "  HLEd: y"
-  echo "  write: $DIR/triphone.mlf"
+  echo "  write: $TRIPHONE_MLF"
   echo "  write: $CDLIST"
   echo
 
   # phoneme -> triphone labels generation
   HLEd -T 1 -l '*/' \
-    -i $DIR/triphone.mlf -n $CDLIST \
-    ed_files/mktri.led $DIR/phoneme.mlf > $DIR/hled_make_cdlist.log
+    -i $TRIPHONE_MLF -n $CDLIST \
+    ed_files/mktri.led $PHONEME_MLF > $DIR/hled_make_cdlist.log
 
   # triphone list generation
   perl pl/mkful.pl $HMMLIST.nosil > ${CDLIST}_redund
@@ -101,7 +100,7 @@ make_cdlist() {
 
 # make required hed file
 make_hed_files() {
-  echo "$SCRIPT_NAME -> make_questions_set()"
+  echo "$SCRIPT_NAME -> make_hed_files()"
   echo "  write: $MKTRI_HED"
   echo "  write: $MKTREE_HED"
   echo "  write: "
@@ -112,7 +111,7 @@ make_hed_files() {
   local tb_command="TB 480.0 $HMMLIST"
   local au_command="AU ${CDLIST}_all"
   local st_command="ST $DIR/khmer_QS_and_tree"
-  local co_command="CO $DIR/tied_cdlist"
+  local co_command="CO $TIED_CDLIST"
   local lt_command="LT $DIR/khmer_QS_and_tree"
 
   # mktri.hed -> monophone to triphone
@@ -157,7 +156,7 @@ make_triphone_model() {
   cp $MONOPHONE_MMF $MODELS_MMF
   # create triphone models from monophone
   HHEd \
-    -T 1 -H $MODELS_MMF -M $DIR/models \
+    -T 1 -H $MODELS_MMF \
     $MKTRI_HED $HMMLIST \
     > $DIR/models/hhed_make_triphone_model.log
 
@@ -165,13 +164,13 @@ make_triphone_model() {
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $DIR/triphone.mlf $CDLIST \
+    -S $MFCLIST -I $TRIPHONE_MLF $CDLIST \
     > $DIR/models/herest_make_triphone_model.log
   HERest \
     -T 1 -H $MODELS_MMF \
     -s $STATSFILE \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $DIR/triphone.mlf $CDLIST \
+    -S $MFCLIST -I $TRIPHONE_MLF $CDLIST \
     > $DIR/models/herest_make_triphone_model.log
 }
 
@@ -186,25 +185,25 @@ make_tied_triphone_model() {
   HHEd \
     -T 1 -H $MODELS_MMF \
     $MKTREE_HED $CDLIST \
-    > $DIR/hhed_make_tied_triphone_model_1.log
+    > $DIR/hhed_make_tied_triphone_model.log
 
   # # extract full state triphone models
   # cp $MODELS_MMF $DIR/models/models_full.mmf
   # HHEd \
   #   -T 1 -H $DIR/models/models_full.mmf \
-  #   $DIR/mkfull.hed $DIR/tied_cdlist \
+  #   $DIR/mkfull.hed $TIED_CDLIST \
   #   > $DIR/hhed_make_tied_triphone_model_2.log
 
   # 2x parameter re-estimation on tied triphone models
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $DIR/triphone.mlf $DIR/tied_cdlist \
+    -S $MFCLIST -I $TRIPHONE_MLF $TIED_CDLIST \
     > $DIR/herest_make_tied_triphone_model.log
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $DIR/triphone.mlf $DIR/tied_cdlist \
+    -S $MFCLIST -I $TRIPHONE_MLF $TIED_CDLIST \
     > $DIR/herest_make_tied_triphone_model.log
 }
 
@@ -220,20 +219,20 @@ viterbi_align() {
     -T 1 -a -l '*' -I labels/words.mlf -i $DIR/phoneme_with_alignment.mlf \
     -C configs/hvite.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
-    dictionary/dictionary.dct.withsil $DIR/tied_cdlist \
+    dictionary/dictionary.dct.withsil $TIED_CDLIST \
     > $DIR/models/hvite_viterbi_align.log
 
   # 2x parameter re-estimation right after viterbi alignment
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $DIR/triphone.mlf $DIR/tied_cdlist \
+    -S $MFCLIST -I $TRIPHONE_MLF $TIED_CDLIST \
     > $DIR/models/herest_viterbi_align.log
 
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $DIR/triphone.mlf $DIR/tied_cdlist \
+    -S $MFCLIST -I $TRIPHONE_MLF $TIED_CDLIST \
     > $DIR/models/herest_viterbi_align.log
 
   cp $MODELS_MMF $DIR/models/gmm_1_hmm.mmf
