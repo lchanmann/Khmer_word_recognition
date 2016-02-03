@@ -20,6 +20,7 @@ MFCLIST=
 DIR=
 PHONEME_MLF=
 TRIPHONE_MLF=
+PHONEME_WITH_ALIGNMENT=
 MODELS_MMF=
 MONOPHONE_MMF=
 STATSFILE=
@@ -41,6 +42,7 @@ setup() {
   DIR=$(dirname $1)
   PHONEME_MLF="$DIR/phoneme.mlf"
   TRIPHONE_MLF="$DIR/triphone.mlf"
+  PHONEME_WITH_ALIGNMENT="$DIR/phoneme_with_alignment.mlf"
   MODELS_MMF="$DIR/models/models.mmf"
   MONOPHONE_MMF="$DIR/models/monophone.mmf"
   STATSFILE="$DIR/khmer_triphone.sta"
@@ -103,7 +105,6 @@ make_hed_files() {
   echo "$SCRIPT_NAME -> make_hed_files()"
   echo "  write: $MKTRI_HED"
   echo "  write: $MKTREE_HED"
-  echo "  write: "
   echo
 
   # phonetic question set generation for triphone clustering
@@ -150,6 +151,7 @@ make_triphone_model() {
   echo "$SCRIPT_NAME -> make_triphone_model()"
   echo "  HHEd: y"
   echo "  HERest: 2x"
+  echo "  write: $STATSFILE"
   echo
 
   # reproduce clean models.mmf from monophone.mmf for isolated testing
@@ -179,6 +181,9 @@ make_tied_triphone_model() {
   echo "$SCRIPT_NAME -> make_tied_triphone_model()"
   echo "  HHEd: y"
   echo "  HERest: 2x"
+  echo "  write: $TIED_CDLIST"
+  echo "  replace: $HMMLIST"
+  echo "  replace: $PHONEME_MLF"
   echo
 
   # generate tied state triphone models
@@ -186,24 +191,30 @@ make_tied_triphone_model() {
     -T 1 -H $MODELS_MMF \
     $MKTREE_HED $CDLIST \
     > $DIR/hhed_make_tied_triphone_model.log
+  
+  # use triphone.mlf -> phoneme.mlf and tied_cdlist -> hmmlist
+  mv $PHONEME_MLF $DIR/monophone.mlf
+  mv $TRIPHONE_MLF $PHONEME_MLF
+  mv $HMMLIST $DIR/monolist
+  mv $TIED_CDLIST $HMMLIST
 
   # # extract full state triphone models
   # cp $MODELS_MMF $DIR/models/models_full.mmf
   # HHEd \
   #   -T 1 -H $DIR/models/models_full.mmf \
-  #   $DIR/mkfull.hed $TIED_CDLIST \
+  #   $DIR/mkfull.hed $HMMLIST \
   #   > $DIR/hhed_make_tied_triphone_model_2.log
 
   # 2x parameter re-estimation on tied triphone models
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $TRIPHONE_MLF $TIED_CDLIST \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/herest_make_tied_triphone_model.log
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $TRIPHONE_MLF $TIED_CDLIST \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/herest_make_tied_triphone_model.log
 }
 
@@ -212,27 +223,28 @@ viterbi_align() {
   echo "$SCRIPT_NAME -> viterbi_align()"
   echo "  HVite: y"
   echo "  HERest: 2x"
+  echo "  write: $PHONME_WITH_ALIGNMENT"
   echo
 
   # viterbi alignment
   HVite \
-    -T 1 -a -l '*' -I labels/words.mlf -i $DIR/phoneme_with_alignment.mlf \
+    -T 1 -a -l '*' -I labels/words.mlf -i $PHONME_WITH_ALIGNMENT \
     -C configs/hvite.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
-    dictionary/dictionary.dct.withsil $TIED_CDLIST \
+    dictionary/dictionary.dct.withsil $HMMLIST \
     > $DIR/models/hvite_viterbi_align.log
 
   # 2x parameter re-estimation right after viterbi alignment
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $TRIPHONE_MLF $TIED_CDLIST \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_viterbi_align.log
 
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
-    -S $MFCLIST -I $TRIPHONE_MLF $TIED_CDLIST \
+    -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_viterbi_align.log
 
   cp $MODELS_MMF $DIR/models/gmm_1_hmm.mmf
@@ -247,7 +259,7 @@ models_tuning() {
   echo "  output: $DIR/models/models.mmf"
   echo
   
-  # bash ./increase_mixture.sh $MIXTURES "$DIR"
+  bash ./increase_mixture.sh $MIXTURES "$DIR"
 }
 
 # ------------------------------------
@@ -256,7 +268,7 @@ models_tuning() {
 #   $1 : MFCLIST
 # ------------------------------------
 
-  setup experiments/triphone/mfclist_trn # $1
+  setup $1
   make_hmmlist
   make_cdlist
   make_hed_files

@@ -14,36 +14,43 @@ set -e
 # E_VARS
 E_USAGE="Usage: $0 \$mixtures \$directory"
 
-# check for required argument
-if [ "$#" -ne "2" ]; then
-  echo $E_USAGE >&2
-  exit 1
-fi
-
 # global variables
 SCRIPT_NAME=$0
+MIXTURES=
 DIR=
 MFCLIST=
 HMMLIST=
 PHONEME_MLF=
+PHONEME_WITH_ALIGNMENT_MLF=
 MODELS_MMF=
-MIXTURES=
+MIXTURE_HED=
+
+# show usage
+show_usage() {
+  echo $E_USAGE >&2
+}
 
 # setup
 setup() {
+  bash ./args_check.sh 2 $@ || (show_usage && exit 1)
   MIXTURES=$1
   DIR=$2
   MFCLIST="$DIR/mfclist_trn"
   HMMLIST="$DIR/hmmlist"
   PHONEME_MLF="$DIR/phoneme.mlf"
+  PHONEME_WITH_ALIGNMENT_MLF="$DIR/phoneme_with_alignment.mlf"
   MODELS_MMF="$DIR/models/models.mmf"
+  MIXTURE_HED="$DIR/mixture.hed"
 
+  # for reproducibility: clone gmm_1_hmm.mmf 
+  cp $DIR/models/gmm_1_hmm.mmf $MODELS_MMF
+  
   # stdout
   echo "$SCRIPT_NAME -> setup()"
   echo 
 }
 
-# viterbi alignment for mixture model
+# viterbi alignment for mixture model ${num}
 viterbi_align() {
   local num=$1
 
@@ -53,23 +60,23 @@ viterbi_align() {
   echo
 
   HVite \
-    -T 1 -a -l '*' -I labels/words.mlf -i $DIR/phoneme_with_alignment.mlf \
+    -T 1 -a -l '*' -I labels/words.mlf -i $PHONEME_WITH_ALIGNMENT_MLF \
     -C configs/hvite.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
     dictionary/dictionary.dct.withsil $HMMLIST \
-    > $DIR/models/hvite_gmm_${num}_hmm.log
+    > $DIR/models/hvite_gmm_${num}.log
 
   # 2x parameter re-estimation right after viterbi alignment
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
-    > $DIR/models/herest_gmm_${num}_hmm.log
+    > $DIR/models/herest_gmm_${num}.log
   HERest \
     -T 1 -H $MODELS_MMF \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
-    > $DIR/models/herest_gmm_${num}_hmm.log
+    > $DIR/models/herest_gmm_${num}.log
   
   cp $MODELS_MMF $DIR/models/gmm_${num}_hmm.mmf
 }
@@ -83,23 +90,23 @@ make_mixtures() {
 
   for num in $(seq 2 2 $MIXTURES);do
     echo "Mixtures: $num"
-    echo "MU $num {*.state[2-4].mix}" > $DIR/mixture.hed
+    echo "MU $num {*.state[2-4].mix}" > $MIXTURE_HED
     HHEd \
       -T 1 -H $MODELS_MMF \
-      $DIR/mixture.hed $HMMLIST \
-      > $DIR/models/hhed_gmm_${num}_hmm.log
+      $MIXTURE_HED $HMMLIST \
+      > $DIR/models/hhed_gmm_${num}.log
 
     # 2x parameter re-estimation after increasing mixtures
     HERest \
       -T 1 -H $MODELS_MMF \
       -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
       -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
-      > $DIR/models/herest_gmm_${num}_hmm.log
+      > $DIR/models/herest_gmm_${num}.log
     HERest \
       -T 1 -H $MODELS_MMF \
       -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
       -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
-      > $DIR/models/herest_gmm_${num}_hmm.log
+      > $DIR/models/herest_gmm_${num}.log
 
     # 2x viterbi alignment
     viterbi_align $num
@@ -114,5 +121,5 @@ make_mixtures() {
 #   $1 : MFCLIST
 # -----------------------------------
 
-  setup $@
+  setup 16 experiments/triphone # $@
   make_mixtures
