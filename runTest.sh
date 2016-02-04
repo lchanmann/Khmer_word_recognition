@@ -13,11 +13,12 @@
 set -e
 
 # E_VARS
-E_USAGE="Usage: $0 (triphone | monophone)"
+E_USAGE="Usage: $0 (triphone | monophone) [\$target_directory [--rerun]]"
 
 # global variables
 MODEL=
 DIR=
+FLAG_RERUN=0
 
 # show usage
 show_usage() {
@@ -27,33 +28,38 @@ show_usage() {
 # setup directory
 setup() {
   bash ./args_check.sh 1 $@ || (show_usage && exit 1)
-  local dir=experiments/$(date +"%F.%H%M").$1
-
-  if [ ! -e "$dir" ]; then \
-    mkdir -p "$dir"; fi
-
-  DIR="$dir"
   MODEL="$1"
+  DIR="$2"
+  if [ -z "$2" ]; then
+    DIR=experiments/$(date +"%F.%H%M").$MODEL
+    mkdir "$DIR"
+  fi
+  # check for rerun flag
+  if [ "$3" == "--rerun" ]; then
+    FLAG_RERUN=1
+  fi
 
   # stdout
   echo "Setting up experiment:"
-  echo "  root: `pwd`$dir"
+  echo "  directory: $DIR"
   echo
 }
 
 # data preparation
 prepare_data() {
-  local testMale=$(bash ./random_speaker.sh m)
-  local testFemale=$(bash ./random_speaker.sh f)
+  if [ "$FLAG_RERUN" -eq "0" ]; then
+    local testMale=$(bash ./random_speaker.sh m)
+    local testFemale=$(bash ./random_speaker.sh f)
 
-  cat scripts/mfclist | grep -v -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_trn
-  cat scripts/mfclist | grep -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_tst
+    cat scripts/mfclist | grep -v -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_trn
+    cat scripts/mfclist | grep -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_tst
 
-  # stdout
-  echo "Data preparation:"
-  echo "  Test male   : $testMale"
-  echo "  Test female : $testFemale"
-  echo
+    # stdout
+    echo "Data preparation:"
+    echo "  Test male   : $testMale"
+    echo "  Test female : $testFemale"
+    echo
+  fi
 }
 
 # model training
@@ -80,7 +86,7 @@ evaluate() {
 #   $1 : MODEL (triphone | monophone)
 # ------------------------------------
 
-  setup $1
+  setup $@
   prepare_data
   training
   evaluate

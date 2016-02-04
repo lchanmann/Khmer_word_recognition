@@ -13,8 +13,8 @@ main() {
   local requiredArgs=$1
   local seenArgs=$2
   
-  if [ "$requiredArgs" == "-1" ] || \
-    [ "$requiredArgs" != "$seenArgs" ]; then
+  if [ "$requiredArgs" -eq "-1" ] || \
+    [ "$requiredArgs" -gt "$seenArgs" ]; then
     exit 1; fi
 }
 
