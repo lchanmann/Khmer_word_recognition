@@ -11,3 +11,4 @@ nohup.out
 *copy/
 *.orig
 experiments/
+test1.sh
