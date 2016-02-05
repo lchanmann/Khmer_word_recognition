@@ -158,7 +158,7 @@ make_triphone_model() {
   cp $MONOPHONE_MMF $MODELS_MMF
   # create triphone models from monophone
   HHEd \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     $MKTRI_HED $HMMLIST \
     > $DIR/models/hhed_make_triphone_model.log
 
@@ -188,7 +188,7 @@ make_tied_triphone_model() {
 
   # generate tied state triphone models
   HHEd \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     $MKTREE_HED $CDLIST \
     > $DIR/hhed_make_tied_triphone_model.log
   
@@ -201,7 +201,7 @@ make_tied_triphone_model() {
   # # extract full state triphone models
   # cp $MODELS_MMF $DIR/models/models_full.mmf
   # HHEd \
-  #   -T 1 -H $DIR/models/models_full.mmf \
+  #   -T 1 -H $DIR/models/models_full.mmf -M $DIR/models \
   #   $DIR/mkfull.hed $HMMLIST \
   #   > $DIR/hhed_make_tied_triphone_model_2.log
 
@@ -268,7 +268,7 @@ models_tuning() {
 #   $1 : MFCLIST
 # ------------------------------------
 
-  setup $1
+  setup $@
   make_hmmlist
   make_cdlist
   make_hed_files

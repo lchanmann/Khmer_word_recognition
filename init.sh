@@ -15,12 +15,6 @@ set -e
 E_USAGE="Usage: $0 \$directory"
 # E_FILES_NOT_FOUND="Error: Required files could not be found."
 
-# check for required argument
-if [ "$#" -ne "1" ]; then
-  echo $E_USAGE >&2
-  exit 1
-fi
-
 # global variables
 SCRIPT_NAME=$0
 DIR=
@@ -30,8 +24,14 @@ PHONEME_MLF=
 PHONEME_WITH_ALIGNMENT_MLF=
 MODELS_MMF=
 
+# show usage
+show_usage() {
+  echo $E_USAGE >&2
+}
+
 # setup
 setup() {
+  bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   DIR=$1
   MFCLIST="$DIR/mfclist_trn"
   HMMLIST="$DIR/hmmlist"
@@ -95,7 +95,7 @@ fix_sil() {
 
   # update HMM parameters to fix silence model
   HHEd \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     ed_files/fix_sil.hed $HMMLIST \
     > $DIR/models/hhed_hmm.log
 
@@ -148,7 +148,7 @@ viterbi_align() {
 #   $1 : MFCLIST
 # ------------------------------------
 
-  setup $1
+  setup $@
   flat_start
   fix_sil
   viterbi_align

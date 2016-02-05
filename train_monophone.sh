@@ -100,7 +100,7 @@ models_tuning() {
 #   $1 : MFCLIST
 # ------------------------------------
 
-  setup $1
+  setup $@
   make_phoneme_mlf
   make_hmmlist
   initialize

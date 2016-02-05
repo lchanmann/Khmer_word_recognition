@@ -88,7 +88,7 @@ show_progress() {
       progressBar=$(echo $progressBar | sed "s/./#/$progress"); fi
     printf "$progressBar\r"
 
-    if [ "$progress" == "100" ]; then
+    if [ "$progress"=="100" ]; then
       break; fi
     sleep $refreshInterval
   done
@@ -105,6 +105,6 @@ show_progress() {
 #   $1 : $DIR
 # -----------------------------------
 
-  setup $1
+  setup $@
   recognize
   show_progress

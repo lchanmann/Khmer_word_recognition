@@ -92,7 +92,7 @@ make_mixtures() {
     echo "Mixtures: $num"
     echo "MU $num {*.state[2-4].mix}" > $MIXTURE_HED
     HHEd \
-      -T 1 -H $MODELS_MMF \
+      -T 1 -H $MODELS_MMF -M $DIR/models \
       $MIXTURE_HED $HMMLIST \
       > $DIR/models/hhed_gmm_${num}.log
 
