@@ -109,7 +109,7 @@ make_hed_files() {
 
   # phonetic question set generation for triphone clustering
   local ro_command="RO 30.0 $STATSFILE"
-  local tb_command="TB 480.0 $HMMLIST"
+  local tb_command="TB 720.0 $HMMLIST"
   local au_command="AU ${CDLIST}_all"
   local st_command="ST $DIR/khmer_QS_and_tree"
   local co_command="CO $TIED_CDLIST"
@@ -162,7 +162,7 @@ make_triphone_model() {
     $MKTRI_HED $HMMLIST \
     > $DIR/models/hhed_make_triphone_model.log
 
-  # first 2x parameter re-estimation on triphone models
+  # first 2x parameter re-estimation on triphone models and generate $STATSFILE
   HERest \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \

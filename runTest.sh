@@ -19,6 +19,7 @@ E_USAGE="Usage: $0 (triphone | monophone) [\$target_directory [--rerun]]"
 MODEL=
 DIR=
 FLAG_RERUN=0
+RESULTS_SUMMARY=
 
 # show usage
 show_usage() {
@@ -30,6 +31,8 @@ setup() {
   bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   MODEL="$1"
   DIR="$2"
+  RESULTS_SUMMARY="$DIR/results_summary"
+  
   if [ -z "$2" ]; then
     DIR=experiments/$(date +"%F.%H%M").$MODEL
     mkdir "$DIR"
@@ -80,6 +83,14 @@ evaluate() {
   echo
 }
 
+# results summary
+results_summary() {
+  echo "Result summary: "
+  echo
+  
+  tail -n 4 $DIR/results/result_*
+}
+
 # ------------------------------------
 # runTest.sh
 #
@@ -90,3 +101,4 @@ evaluate() {
   prepare_data
   training
   evaluate
+  results_summary
