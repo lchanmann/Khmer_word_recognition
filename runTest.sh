@@ -35,7 +35,7 @@ setup() {
     mkdir "$DIR"
   fi
   # check for rerun flag
-  if [ "$3"=="--rerun" ]; then
+  if [ "$3" = "--rerun" ]; then
     FLAG_RERUN=1
   fi
 

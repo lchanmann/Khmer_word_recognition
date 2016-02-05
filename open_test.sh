@@ -15,7 +15,7 @@ model=$1
 hmmlist=phones/khmer.phe
 
 # hmmlist for triphone
-if [ "$model"=="triphone" ]; then
+if [ "$model" = "triphone" ]; then
   hmmlist=phones/khmer_tied_triphone.phe
 fi
 
