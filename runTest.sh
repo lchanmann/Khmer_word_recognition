@@ -55,13 +55,13 @@ prepare_data() {
     # local testFemale=$(bash ./random_speaker.sh f)
     
     # use neutral test speakers instead of randomization
-    local testMale=6
-    local testFemale=2
+    local testMale=spkr4
+    local testFemale=spkr1
 
     cat scripts/mfclist | grep -v -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_trn
     cat scripts/mfclist | grep -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_tst
 
-    # stdout
+    # stdoutr
     echo "Data preparation:"
     echo "  Test male   : $testMale"
     echo "  Test female : $testFemale"
