@@ -80,6 +80,7 @@ show_progress() {
   local refreshInterval=2
 
   while true; do
+    sleep $refreshInterval
     current=$(cat $DIR/results/hvite_*.log | grep -c "")
     progress=$((current*100/total))
 
@@ -88,9 +89,8 @@ show_progress() {
       progressBar=$(echo $progressBar | sed "s/./#/$progress"); fi
     printf "$progressBar\r"
 
-    if [ "$progress"=="100" ]; then
+    if [ "$progress" -eq "100" ]; then
       break; fi
-    sleep $refreshInterval
   done
 
   echo
