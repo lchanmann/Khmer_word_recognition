@@ -68,12 +68,12 @@ viterbi_align() {
 
   # 2x parameter re-estimation right after viterbi alignment
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_gmm_${num}.log
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_gmm_${num}.log
@@ -98,12 +98,12 @@ make_mixtures() {
 
     # 2x parameter re-estimation after increasing mixtures
     HERest \
-      -T 1 -H $MODELS_MMF \
+      -T 1 -H $MODELS_MMF -M $DIR/models \
       -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
       -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
       > $DIR/models/herest_gmm_${num}.log
     HERest \
-      -T 1 -H $MODELS_MMF \
+      -T 1 -H $MODELS_MMF -M $DIR/models \
       -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
       -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
       > $DIR/models/herest_gmm_${num}.log

@@ -68,19 +68,19 @@ flat_start() {
 
   # Baum-Welch parameter re-estimation for 3 iterations
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 240.0 120.0 1920.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log
 
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 180.0 90.0 1440.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log
 
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log
@@ -101,13 +101,13 @@ fix_sil() {
 
   # 2x parameter re-estimation right after fixing silence model
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log
 
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log
@@ -130,13 +130,13 @@ viterbi_align() {
 
   # 2x parameter re-estimation right after viterbi alignment
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log
   
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log

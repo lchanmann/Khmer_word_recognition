@@ -164,12 +164,12 @@ make_triphone_model() {
 
   # first 2x parameter re-estimation on triphone models
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $TRIPHONE_MLF $CDLIST \
     > $DIR/models/herest_make_triphone_model.log
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -s $STATSFILE \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $TRIPHONE_MLF $CDLIST \
@@ -207,12 +207,12 @@ make_tied_triphone_model() {
 
   # 2x parameter re-estimation on tied triphone models
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/herest_make_tied_triphone_model.log
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/herest_make_tied_triphone_model.log
@@ -236,13 +236,13 @@ viterbi_align() {
 
   # 2x parameter re-estimation right after viterbi alignment
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_viterbi_align.log
 
   HERest \
-    -T 1 -H $MODELS_MMF \
+    -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_viterbi_align.log
