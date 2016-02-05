@@ -51,8 +51,12 @@ setup() {
 # data preparation
 prepare_data() {
   if [ "$FLAG_RERUN" -eq "0" ]; then
-    local testMale=$(bash ./random_speaker.sh m)
-    local testFemale=$(bash ./random_speaker.sh f)
+    # local testMale=$(bash ./random_speaker.sh m)
+    # local testFemale=$(bash ./random_speaker.sh f)
+    
+    # use neutral test speakers instead of randomization
+    local testMale=6
+    local testFemale=2
 
     cat scripts/mfclist | grep -v -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_trn
     cat scripts/mfclist | grep -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_tst
