@@ -51,7 +51,7 @@ setup() {
   TIED_CDLIST="$DIR/tied_cdlist"
   MKTRI_HED="$DIR/mktri.hed"
   MKTREE_HED="$DIR/mktree.hed"
-
+  
   # stdout
   echo "$SCRIPT_NAME -> setup()"
   echo "  DIR: $DIR"
@@ -68,7 +68,7 @@ make_hmmlist() {
   echo
 
   # word -> phoneme level label generation
-  HLEd -T 1 -l '*/' \
+  HLEd -A -D -V -T 3 -l '*/' \
     -i $PHONEME_MLF \
     -d dictionary/dictionary.dct \
     ed_files/mkphn.led labels/words.mlf > $DIR/hled_make_hmmlist.log
@@ -91,7 +91,7 @@ make_cdlist() {
   echo
 
   # phoneme -> triphone labels generation
-  HLEd -T 1 -l '*/' \
+  HLEd -A -D -V -T 3 -l '*/' \
     -i $TRIPHONE_MLF -n $CDLIST \
     ed_files/mktri.led $PHONEME_MLF > $DIR/hled_make_cdlist.log
 
@@ -157,7 +157,7 @@ make_triphone_model() {
   # reproduce clean models.mmf from monophone.mmf for isolated testing
   cp $MONOPHONE_MMF $MODELS_MMF
   # create triphone models from monophone
-  HHEd \
+  HHEd -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     $MKTRI_HED $HMMLIST \
     > $DIR/models/hhed_make_triphone_model.log
@@ -168,7 +168,7 @@ make_triphone_model() {
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $TRIPHONE_MLF $CDLIST \
     > $DIR/models/herest_make_triphone_model.log
-  HERest \
+  HERest -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -s $STATSFILE \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
@@ -185,12 +185,12 @@ make_tied_triphone_model() {
   echo "  replace: $HMMLIST"
   echo "  replace: $PHONEME_MLF"
   echo
-
+  
   # generate tied state triphone models
-  HHEd \
+  HHEd -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     $MKTREE_HED $CDLIST \
-    > $DIR/hhed_make_tied_triphone_model.log
+    > $DIR/models/hhed_make_tied_triphone_model.log
   
   # use triphone.mlf -> phoneme.mlf and tied_cdlist -> hmmlist
   mv $PHONEME_MLF $DIR/monophone.mlf
@@ -211,7 +211,7 @@ make_tied_triphone_model() {
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/herest_make_tied_triphone_model.log
-  HERest \
+  HERest -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
@@ -227,7 +227,7 @@ viterbi_align() {
   echo
 
   # viterbi alignment
-  HVite \
+  HVite -A -D -V \
     -T 1 -a -l '*' -I labels/words.mlf -i $PHONEME_WITH_ALIGNMENT_MLF \
     -C configs/hvite.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
@@ -241,7 +241,7 @@ viterbi_align() {
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_viterbi_align.log
 
-  HERest \
+  HERest -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
@@ -277,3 +277,4 @@ models_tuning() {
   make_tied_triphone_model
   viterbi_align
   models_tuning
+  

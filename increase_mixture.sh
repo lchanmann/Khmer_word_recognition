@@ -59,7 +59,7 @@ viterbi_align() {
   echo "  HERest: 2x"
   echo
 
-  HVite \
+  HVite -A -D -V \
     -T 1 -a -l '*' -I labels/words.mlf -i $PHONEME_WITH_ALIGNMENT_MLF \
     -C configs/hvite.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
@@ -72,7 +72,7 @@ viterbi_align() {
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_gmm_${num}.log
-  HERest \
+  HERest -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
@@ -91,7 +91,7 @@ make_mixtures() {
   for num in $(seq 2 2 $MIXTURES);do
     echo "Mixtures: $num"
     echo "MU $num {*.state[2-4].mix}" > $MIXTURE_HED
-    HHEd \
+    HHEd -A -D -V \
       -T 1 -H $MODELS_MMF -M $DIR/models \
       $MIXTURE_HED $HMMLIST \
       > $DIR/models/hhed_gmm_${num}.log
@@ -102,7 +102,7 @@ make_mixtures() {
       -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
       -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
       > $DIR/models/herest_gmm_${num}.log
-    HERest \
+    HERest -A -D -V \
       -T 1 -H $MODELS_MMF -M $DIR/models \
       -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
       -S $MFCLIST -I $PHONEME_MLF $HMMLIST \

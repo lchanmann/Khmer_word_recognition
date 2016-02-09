@@ -17,7 +17,7 @@ sed -e "s/^$WAV\//mfcc\//" -e 's/.wav$/.mfc/' scripts/wavlist > scripts/mfclist
 paste scripts/wavlist scripts/mfclist > scripts/wav2mfcc
 
 # feature extraction
-HCopy -T 3 -C configs/hcopy.conf -S scripts/wav2mfcc > logs/hcopy.log
+HCopy -A -D -V -T 3 -C configs/hcopy.conf -S scripts/wav2mfcc > logs/hcopy.log
 
 # vocabulary extraction
 cat labels/words.mlf | grep -v '^[#".]' | sort -u > dictionary/dictionary.wrd
@@ -34,7 +34,7 @@ echo >> dictionary/grammar
 echo '(!ENTER $word !EXIT)' >> dictionary/grammar
 
 # convert task grammar into word network for recognizer
-HParse dictionary/grammar lm/word_network.lat
+HParse -A -D -V dictionary/grammar lm/word_network.lat > logs/hparse.log
 
 # # bigram language model generation
 # HLStats -T 1 -b lm/bigram.lm -o -t 1 dictionary/dictionary.wrd labels/words.mlf > logs/hlstats.log

@@ -49,7 +49,7 @@ make_phoneme_mlf() {
   echo
 
   # word -> phoneme level label generation
-  HLEd -T 1 -l '*/' \
+  HLEd -A -D -V -T 1 -l '*/' \
     -i $DIR/phoneme.mlf \
     -d dictionary/dictionary.dct \
     ed_files/mkphn.led labels/words.mlf > $DIR/hled_make_phoneme.log

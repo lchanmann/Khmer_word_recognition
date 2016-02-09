@@ -49,14 +49,14 @@ viterbi_decode() {
   local num=$(basename $models | sed -e "s/gmm_//" -e "s/_hmm.mmf//")
 
   # viterbi decoding
-  HVite \
+  HVite -A -D -V \
     -T 1 -l '*' -i $DIR/results/output_${num}.mlf \
     -z zoo -q Atvaldmnr -s 2.4 -p -1.2 \
     -S $MFCLIST -H $models -w lm/word_network.lat \
     dictionary/dictionary.dct $HMMLIST > $DIR/results/hvite_${num}.log
 
   # generate result statistics
-  HResults \
+  HResults -A -D -V \
     -f -I labels/words.mlf /dev/null $DIR/results/output_${num}.mlf \
     > $DIR/results/result_${num}.log
 }

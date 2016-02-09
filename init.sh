@@ -54,8 +54,8 @@ flat_start() {
   echo
 
   # flat-start initialization
-  HCompV \
-    -T 1 -M $DIR/models \
+  HCompV -A -D -V \
+    -T 3 -M $DIR/models \
     -C configs/hcompv.conf -m \
     -S $MFCLIST models/proto > $DIR/models/hcompv.log
 
@@ -79,7 +79,7 @@ flat_start() {
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log
 
-  HERest \
+  HERest -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
@@ -94,7 +94,7 @@ fix_sil() {
   echo
 
   # update HMM parameters to fix silence model
-  HHEd \
+  HHEd -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     ed_files/fix_sil.hed $HMMLIST \
     > $DIR/models/hhed_hmm.log
@@ -104,13 +104,13 @@ fix_sil() {
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
-    > $DIR/models/herest_hmm.log
+    > $DIR/models/herest_fix_sil.log
 
-  HERest \
+  HERest -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
-    > $DIR/models/herest_hmm.log
+    > $DIR/models/herest_fix_sil.log
 }
 
 # viterbi alignment
@@ -121,7 +121,7 @@ viterbi_align() {
   echo
 
   # viterbi alignment
-  HVite \
+  HVite -A -D -V \
     -T 1 -a -l '*' -I labels/words.mlf -i $PHONEME_WITH_ALIGNMENT_MLF \
     -C configs/hvite.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
@@ -134,8 +134,8 @@ viterbi_align() {
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_hmm.log
-  
-  HERest \
+
+  HERest -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/models \
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \

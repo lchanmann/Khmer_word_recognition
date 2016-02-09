@@ -17,6 +17,7 @@ if (@ARGV != 2) {
 open(MONO, "@ARGV[0]");
 
 print "CL $trilist\n\n";
+print "TR 10\n\n";
 
 while ($phone = <MONO>) {
    chop($phone);
