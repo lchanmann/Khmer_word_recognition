@@ -19,7 +19,6 @@ E_USAGE="Usage: $0 (triphone | monophone) [\$target_directory [--rerun]]"
 MODEL=
 DIR=
 FLAG_RERUN=0
-RESULTS_SUMMARY=
 
 # show usage
 show_usage() {
@@ -28,10 +27,9 @@ show_usage() {
 
 # setup directory
 setup() {
-  bash ./args_check.sh 1 $@ || (show_usage && exit 1)
+  bash ./args_check.sh 1 $@ || (show_usage && exit 1)  
   MODEL="$1"
   DIR="$2"
-  RESULTS_SUMMARY="$DIR/results_summary"
   
   if [ -z "$2" ]; then
     DIR=experiments/$(date +"%F.%H%M").$MODEL
@@ -54,17 +52,16 @@ prepare_data() {
     # local testMale=$(bash ./random_speaker.sh m)
     # local testFemale=$(bash ./random_speaker.sh f)
     
-    # use neutral test speakers instead of randomization
-    local testMale=spkr4
-    local testFemale=spkr1
-
-    cat scripts/mfclist | grep -v -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_trn
-    cat scripts/mfclist | grep -e "$testMale/" -e "$testFemale/" > $DIR/mfclist_tst
+    # use 4 neutral test speakers instead of randomization
+    local testSpeakers="spkr4/ spkr8/ spkr1/ spkr11/"
+    local grepOption=$(echo $testSpeakers | sed "s/\(spkr\)/\\-e \1/g")
+    
+    cat scripts/mfclist | grep -v ${grepOption} > $DIR/mfclist_trn
+    cat scripts/mfclist | grep ${grepOption} > $DIR/mfclist_tst
 
     # stdoutr
     echo "Data preparation:"
-    echo "  Test male   : $testMale"
-    echo "  Test female : $testFemale"
+    echo "  Test speakers: $testSpeakers"
     echo
   fi
 }
