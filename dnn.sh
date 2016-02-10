@@ -49,11 +49,21 @@ state2frame_align() {
   
   # viterbi alignment # -m -b SIL -o SW -y lab \
   HVite -A -D -V \
-    -T 1 -a -l '*' -I labels/words.mlf -i $DIR/dnn/train.align.mmf \
+    -T 1 -a -l '*' -I labels/words.mlf -i $DIR/dnn/train.aligned.mmf \
     -C configs/hvite.conf -f -o MW -b SIL -y lab \
     -S $MFCLIST -H $MODELS_MMF \
     dictionary/dictionary.dct.withsil $HMMLIST \
     > $DIR/dnn/hvite_state2frame_align.log
+}
+
+# construct dnn prototype model
+dnn_proto() {
+  echo "$SCRIPT_NAME -> dnn_proto()"
+  echo
+  
+  # intialize dnn model
+  python python/GenInitDNN.py --quiet \
+    hte_files/dnn.hte $DIR/dnn/proto
 }
 
 # ------------------------------------
@@ -63,5 +73,6 @@ state2frame_align() {
 # ------------------------------------
 
   setup experiments/step_by_step # $@
-  state2frame_align
+  # state2frame_align
+  dnn_proto
   
