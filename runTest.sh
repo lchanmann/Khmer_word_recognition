@@ -53,7 +53,7 @@ prepare_data() {
     # local testFemale=$(bash ./random_speaker.sh f)
     
     # use 4 neutral test speakers instead of randomization
-    local testSpeakers="spkr4/ spkr8/ spkr1/ spkr11/"
+    local testSpeakers="spkr04/ spkr08/ spkr01/ spkr11/"
     local grepOption="$(echo $testSpeakers | sed "s/\(spkr\)/\\-e \1/g")"
     
     cat scripts/mfclist | grep -v ${grepOption} > $DIR/mfclist_trn

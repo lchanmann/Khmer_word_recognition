@@ -6,15 +6,16 @@ WAV='wav'
 
 # create required directories
 mkdir -p mfcc lm tmp logs
-for n in `seq 1 1 14`
-do
-  mkdir -p mfcc/spkr$n
-done
 
 # generate script files
 ls -1d $WAV/*/* > scripts/wavlist
 sed -e "s/^$WAV\//mfcc\//" -e 's/.wav$/.mfc/' scripts/wavlist > scripts/mfclist
 paste scripts/wavlist scripts/mfclist > scripts/wav2mfcc
+
+# create mfcc directory
+cat scripts/mfclist | grep -o "mfcc/spkr[0-9]*" | sort -u | while read dir; do
+  mkdir -p $dir
+done
 
 # feature extraction
 HCopy -A -D -V -T 3 -C configs/hcopy.conf -S scripts/wav2mfcc > logs/hcopy.log
