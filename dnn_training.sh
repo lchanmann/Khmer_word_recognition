@@ -83,6 +83,19 @@ dnn_init() {
     > $DIR/dnn/hhed_dnn_init.log
 }
 
+# pretrain
+pretrain() {
+  echo "$SCRIPT_NAME -> pretrain()"
+  echo
+  
+  # generate variable vector for unit variance normalization
+  HCompV \
+    -k "*.%%%" -C configs/hcompv.conf \
+    -q v -c $DIR \
+    -S $MFCLIST
+  mv $DIR/mfc $DIR/dnn/variance
+}
+
 # ------------------------------------
 # dnn.sh - train dnn-hmm models
 #
@@ -92,4 +105,5 @@ dnn_init() {
   setup experiments/step_by_step # $@
   state2frame_align
   dnn_init
+  pretrain
   
