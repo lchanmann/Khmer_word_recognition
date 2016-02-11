@@ -21,6 +21,7 @@ MFCLIST=
 MODELS_MMF=
 HMMLIST=
 DNN_PROTO=
+CONNECT_HED=
 
 # show usage
 show_usage() {
@@ -35,6 +36,7 @@ setup() {
   MODELS_MMF="$DIR/models/models.mmf"
   HMMLIST="$DIR/hmmlist"
   DNN_PROTO="$DIR/dnn/proto"
+  CONNECT_HED="$DIR/dnn/connect.hed"
   
   mkdir -p $DIR/dnn
   
@@ -62,6 +64,7 @@ state2frame_align() {
 # construct dnn prototype model
 dnn_init() {
   echo "$SCRIPT_NAME -> dnn_init()"
+  echo "  HHEd: y"
   echo "  write: $DNN_PROTO"
   echo "  write: $DIR/connect.hed"
   echo
@@ -70,9 +73,14 @@ dnn_init() {
   python python/GenInitDNN.py --quiet \
     hte_files/dnn.hte $DNN_PROTO
   
-  
   # make_connect_hed
   bash ./make_connect_hed.sh $DNN_PROTO
+  
+  # associate DNN and HMM
+  HHEd -A -D -V \
+    -T 1 -H $MODELS_MMF -M $DIR/dnn \
+    $CONNECT_HED $HMMLIST \
+    > $DIR/dnn/hhed_dnn_init.log
 }
 
 # ------------------------------------
