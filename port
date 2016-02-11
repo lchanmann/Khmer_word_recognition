@@ -1,0 +1,70 @@
+#!/bin/sh
+
+# -----------------------------------
+# Project   : Khmer_word_recognition
+# Author    : Chanmann Lim
+#
+# Changelogs:
+#   - 02/10/2016  : file created.
+# -----------------------------------
+
+# exit on error
+set -e
+
+# E_VARS
+E_USAGE="Usage: $0 (ubuntu | mac)"
+
+# global variables
+SCRIPT_NAME=$0
+OS=
+
+# show usage
+show_usage() {
+  echo $E_USAGE >&2
+}
+
+# port_ubuntu
+port_ubuntu() {
+  echo "$SCRIPT_NAME -> port_ubuntu"
+  echo
+  
+  mkdir "port_backup"
+  ls *.sh | while read file; do
+    mv $file "port_backup/$file"
+    sed "s/sort -u/sort -uV/g" "port_backup/$file" > $file
+    chmod a+x $file
+  done
+}
+
+# port_mac
+port_mac() {
+  echo "$SCRIPT_NAME -> port_mac"
+  echo
+  
+  mkdir "port_backup"
+  ls *.sh | while read file; do
+    mv $file "port_backup/$file"
+    sed "s/sort -uV/sort -u/g" "port_backup/$file" > $file
+    chmod a+x $file
+  done
+}
+
+# main
+main() {
+  bash ./args_check.sh 1 $@ || (show_usage && exit 1)
+  OS=$1
+  case ${OS} in
+    "ubuntu" ) port_ubuntu;;
+    "mac"    ) port_mac;;
+    *        ) show_usage
+  esac
+}
+
+# ------------------------------------
+# make_connect_hed.sh - make connect.hed for DNN-HMM initialization
+#
+#   $1 : (ubuntu | mac)
+# ------------------------------------
+
+  main $@
+  
