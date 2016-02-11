@@ -22,6 +22,7 @@ MODELS_MMF=
 HMMLIST=
 DNN_PROTO=
 CONNECT_HED=
+DNN_TRAIN_ALIGNED_MLF=
 
 # show usage
 show_usage() {
@@ -37,8 +38,10 @@ setup() {
   HMMLIST="$DIR/hmmlist"
   DNN_PROTO="$DIR/dnn/proto"
   CONNECT_HED="$DIR/dnn/connect.hed"
+  DNN_TRAIN_ALIGNED_MLF="$DIR/dnn/train.aligned.mlf"
   
   mkdir -p $DIR/dnn
+  mkdir -p $DIR/cvn
   
   # stdout
   echo "$SCRIPT_NAME -> setup()"
@@ -54,7 +57,7 @@ state2frame_align() {
   
   # viterbi alignment # -m -b SIL -o SW -y lab \
   HVite -A -D -V \
-    -T 1 -a -l '*' -I labels/words.mlf -i $DIR/dnn/train.aligned.mmf \
+    -T 1 -a -l '*' -I labels/words.mlf -i $DNN_TRAIN_ALIGNED_MLF \
     -C configs/hvite.conf -f -o MW -b SIL -y lab \
     -S $MFCLIST -H $MODELS_MMF \
     dictionary/dictionary.dct.withsil $HMMLIST \
@@ -89,21 +92,46 @@ heldout_split() {
   echo
   
   local vSpkr="$(bash ./random_speaker.sh --trn)"
-  cat $MFCLIST | grep ${vSpkr} > $DIR/dnn/mfclist_dnn_holdout
-  cat $MFCLIST | grep -v ${vSpkr} > $DIR/dnn/mfclist_dnn_trn
+  cat $MFCLIST | grep ${vSpkr} > $DIR/dnn_holdout.scp
+  cat $MFCLIST | grep -v ${vSpkr} > $DIR/dnn_trn.scp
+}
+
+# make_basic_pretrain_conf
+make_basic_pretrain_conf() {
+  echo "$SCRIPT_NAME -> make_basic_pretrain_conf()"
+  echo
+  
+  local targetKind="TARGETKIND = MFCC_0_D_A_Z"
+  local varScaleDir="HPARM: VARSCALEDIR = $DIR/cvn"
+  local varScaleMask="HPARM: VARSCALEMASK = '*.%%%'"
+  local varScaleFn="HPARM: VARSCALEFN = models/ident_MFCC_0_D_A_Z_cvn"
+  
+  echo ${targetKind}   > $DIR/basic_pretrain.conf
+  echo ${varScaleDir}  >> $DIR/basic_pretrain.conf
+  echo ${varScaleMask} >> $DIR/basic_pretrain.conf
+  echo ${varScaleFn}   >> $DIR/basic_pretrain.conf
 }
 
 # pretrain
 pretrain() {
   echo "$SCRIPT_NAME -> pretrain()"
+  echo "  HCompV: y"
+  echo "  HNTrainSGD: y"
   echo
   
   # generate variable vector for unit variance normalization
-  HCompV \
+  HCompV -A -D -V -T 3 \
     -k "*.%%%" -C configs/hcompv.conf \
-    -q v -c $DIR \
-    -S $MFCLIST
-  mv $DIR/mfc $DIR/dnn/variance
+    -q v -c $DIR/cvn \
+    -S $MFCLIST > $DIR/dnn/hcompv_pretrain.log
+  
+  # discriminative pre-train to add new hidden layer gruadually
+  HNTrainSGD -A -D -V \
+    -T 1 -C $DIR/basic_pretrain.conf -C configs/dnn_pretrain.conf \
+    -H $DIR/dnn/models.mmf -M $DIR/dnn \
+    -S $DIR/dnn_trn.scp -N $DIR/dnn_holdout.scp \
+    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
+    $HMMLIST > $DIR/dnn/hntrainsgd_pretrain.log
 }
 
 # ------------------------------------
@@ -113,8 +141,9 @@ pretrain() {
 # ------------------------------------
 
   setup experiments/step_by_step # $@
-  # state2frame_align
-  # dnn_init
+  state2frame_align
+  dnn_init
   heldout_split
-  # pretrain
+  make_basic_pretrain_conf
+  pretrain
   

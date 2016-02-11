@@ -29,7 +29,7 @@ show_usage() {
 ch_command() {
   local N_Macro="$(cat $DNN_PROTO | grep '~N')"
   touch $DIR/emtpy
-  echo "CH $DNN_PROTO $DIR/emtpy $N_Macro <HYBRID>"
+  echo "CH $DNN_PROTO models/empty $N_Macro <HYBRID>"
 }
 
 # sw_command
