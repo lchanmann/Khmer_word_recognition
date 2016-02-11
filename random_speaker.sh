@@ -35,11 +35,11 @@ main() {
     shift
   done
   
-  local SPKR=( $(echo "$Y" | grep -o "spkr[0-9]*/") )
-  local l=${#Y[*]}
+  local speakers=( $(echo $Y | grep -o "spkr[0-9]*/") )
+  local l=${#speakers[*]}
 
   # stdout
-  echo "${SPKR[$(( RANDOM % l ))]}"
+  echo "${speakers[$(( RANDOM % l ))]}"
 }
 
 # ------------------------------------
