@@ -20,6 +20,7 @@ DIR=
 MFCLIST=
 MODELS_MMF=
 HMMLIST=
+DNN_PROTO=
 
 # show usage
 show_usage() {
@@ -30,9 +31,10 @@ show_usage() {
 setup() {
   bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   DIR=$1
-  MFCLIST=$DIR/mfclist_trn
-  MODELS_MMF=$DIR/models/models.mmf
-  HMMLIST=$DIR/hmmlist
+  MFCLIST="$DIR/mfclist_trn"
+  MODELS_MMF="$DIR/models/models.mmf"
+  HMMLIST="$DIR/hmmlist"
+  DNN_PROTO="$DIR/dnn/proto"
   
   mkdir -p $DIR/dnn
   
@@ -45,6 +47,7 @@ setup() {
 # state-to-frame alignment
 state2frame_align() {
   echo "$SCRIPT_NAME -> state2frame_align()"
+  echo "  HVite: y"
   echo
   
   # viterbi alignment # -m -b SIL -o SW -y lab \
@@ -57,13 +60,19 @@ state2frame_align() {
 }
 
 # construct dnn prototype model
-dnn_proto() {
-  echo "$SCRIPT_NAME -> dnn_proto()"
+dnn_init() {
+  echo "$SCRIPT_NAME -> dnn_init()"
+  echo "  write: $DNN_PROTO"
+  echo "  write: $DIR/connect.hed"
   echo
   
-  # intialize dnn model
+  # intialize dnn proto model
   python python/GenInitDNN.py --quiet \
-    hte_files/dnn.hte $DIR/dnn/proto
+    hte_files/dnn.hte $DNN_PROTO
+  
+  
+  # make_connect_hed
+  bash ./make_connect_hed.sh $DNN_PROTO
 }
 
 # ------------------------------------
@@ -73,6 +82,6 @@ dnn_proto() {
 # ------------------------------------
 
   setup experiments/step_by_step # $@
-  # state2frame_align
-  dnn_proto
+  state2frame_align
+  dnn_init
   
