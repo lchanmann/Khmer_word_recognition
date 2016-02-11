@@ -83,6 +83,16 @@ dnn_init() {
     > $DIR/dnn/hhed_dnn_init.log
 }
 
+# heldout_split
+heldout_split() {
+  echo "$SCRIPT_NAME -> heldout_split()"
+  echo
+  
+  local vSpkr="$(bash ./random_speaker.sh --trn)"
+  cat $MFCLIST | grep ${vSpkr} > $DIR/dnn/mfclist_dnn_holdout
+  cat $MFCLIST | grep -v ${vSpkr} > $DIR/dnn/mfclist_dnn_trn
+}
+
 # pretrain
 pretrain() {
   echo "$SCRIPT_NAME -> pretrain()"
@@ -103,7 +113,8 @@ pretrain() {
 # ------------------------------------
 
   setup experiments/step_by_step # $@
-  state2frame_align
-  dnn_init
-  pretrain
+  # state2frame_align
+  # dnn_init
+  heldout_split
+  # pretrain
   
