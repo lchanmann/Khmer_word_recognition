@@ -72,9 +72,9 @@ dnn_init() {
   echo "  write: $DIR/connect.hed"
   echo
   
-  # intialize dnn proto model
+  # intialize 3 layer dnn prototype model
   python python/GenInitDNN.py --quiet \
-    hte_files/dnn.hte $DNN_PROTO
+    hte_files/dnn3.hte $DNN_PROTO
   
   # make_connect_hed
   bash ./make_connect_hed.sh $DNN_PROTO
@@ -96,9 +96,9 @@ holdout_split() {
   cat $MFCLIST | grep -v ${vSpkr} > $DIR/dnn_trn.scp
 }
 
-# make_basic_pretrain_conf
-make_basic_pretrain_conf() {
-  echo "$SCRIPT_NAME -> make_basic_pretrain_conf()"
+# make_dnn_basic_conf
+make_dnn_basic_conf() {
+  echo "$SCRIPT_NAME -> make_dnn_basic_conf()"
   echo
   
   local targetKind="TARGETKIND = MFCC_0_D_A_Z"
@@ -106,32 +106,10 @@ make_basic_pretrain_conf() {
   local varScaleMask="HPARM: VARSCALEMASK = '*.%%%'"
   local varScaleFn="HPARM: VARSCALEFN = models/ident_MFCC_0_D_A_Z_cvn"
   
-  echo ${targetKind}   > $DIR/basic_pretrain.conf
-  echo ${varScaleDir}  >> $DIR/basic_pretrain.conf
-  echo ${varScaleMask} >> $DIR/basic_pretrain.conf
-  echo ${varScaleFn}   >> $DIR/basic_pretrain.conf
-}
-
-# pretrain
-pretrain() {
-  echo "$SCRIPT_NAME -> pretrain()"
-  echo "  HCompV: y"
-  echo "  HNTrainSGD: y"
-  echo
-  
-  # generate variable vector for unit variance normalization
-  HCompV -A -D -V -T 3 \
-    -k "*.%%%" -C configs/hcompv.conf \
-    -q v -c $DIR/cvn \
-    -S $MFCLIST > $DIR/dnn/hcompv_pretrain.log
-  
-  # discriminative pre-train to add new hidden layer gruadually
-  HNTrainSGD -A -D -V \
-    -T 1 -C $DIR/basic_pretrain.conf -C configs/dnn_pretrain.conf \
-    -H $DIR/dnn/models.mmf -M $DIR/dnn \
-    -S $DIR/dnn_trn.scp -N $DIR/dnn_holdout.scp \
-    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
-    $HMMLIST > $DIR/dnn/hntrainsgd_pretrain.log
+  echo ${targetKind}   > $DIR/dnn_basic.conf
+  echo ${varScaleDir}  >> $DIR/dnn_basic.conf
+  echo ${varScaleMask} >> $DIR/dnn_basic.conf
+  echo ${varScaleFn}   >> $DIR/dnn_basic.conf
 }
 
 # make_addlayer_hed
@@ -157,31 +135,85 @@ AV ~V "$thisLayerBias" <VECTOR> $numOfNodes
 IL $N_Macro $level ~L "layer${level}" <BEGINLAYER> <LAYERKIND> "PERCEPTRON" \
   <INPUTFEATURE> ~F "$lastLayerFeature" <WEIGHT> ~M "$thisLayerWeight" \
   <BIAS> ~V "$thisLayerBias" <ACTIVATION> "$activation" <ENDLAYER>
-CF ~L "layerout" ~F "$thisLayerFeature" <FEATURE> 1 $numOfNodes \
+AF ~F "$thisLayerFeature" <NUMFEATURES> 1 $numOfNodes <FEATURE> 1 $numOfNodes \
   <SOURCE> ~L "layer${level}" <CONTEXTSHIFT> 1 0
+CF ~L "layerout" ~F "$thisLayerFeature"
+CD ~L "layerout" 0 $numOfNodes
 EL ~L "layer${level}"
 EL ~L "layerout"
 _EOF_
 }
 
+# read_numlayers
+read_numlayers() {
+  cat $DIR/dnn/models.mmf \
+    | grep "<NUMLAYERS>" \
+    | grep -o "[0-9]*$"
+}
+
 # add_hidden_layer
 add_hidden_layer() {
   echo "$SCRIPT_NAME -> add_hidden_layer()"
+  echo "  # hidden nodes: $1"
   echo
   
-  local layers="$(cat $DIR/dnn/models.mmf | grep "<NUMLAYERS>" | grep -o "[0-9]*$")"
-  
-  # save dnn model
-  cp $DIR/dnn/models.mmf $DIR/dnn/dnn${layers}_hmm.mmf
+  local numOfNodes="$1"
+  local layers="$(read_numlayers)"
   
   # make addlayer_?.hed
-  make_addlayer_hed $((layers ++)) 1000 > $DIR/addlayer_${layers}.hed
+  make_addlayer_hed $((layers ++)) $numOfNodes > $DIR/addlayer_${layers}.hed
   
   # add new layer macro to models
   HHEd -A -D -V \
     -T 1 -H $DIR/dnn/models.mmf -M $DIR/dnn \
     $DIR/addlayer_${layers}.hed $HMMLIST \
     > $DIR/dnn/hhed_add_hidden_layer${layers}.log
+}
+
+# pretrain
+pretrain() {
+  echo "$SCRIPT_NAME -> pretrain()"
+  echo "  HCompV: y"
+  echo "  HNTrainSGD: y"
+  echo
+  
+  # generate variable vector for unit variance normalization
+  HCompV -A -D -V -T 3 \
+    -k "*.%%%" -C configs/hcompv.conf \
+    -q v -c $DIR/cvn \
+    -S $MFCLIST > $DIR/dnn/hcompv_pretrain.log
+
+  # discriminative pre-train to add new hidden layer gruadually
+  HNTrainSGD -A -D -V \
+    -T 1 -C $DIR/dnn_basic.conf -C configs/dnn_pretrain.conf \
+    -H $DIR/dnn/models.mmf -M $DIR/dnn \
+    -S $DIR/dnn_trn.scp -N $DIR/dnn_holdout.scp \
+    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
+    $HMMLIST > $DIR/dnn/HNTrainSGD_pretrain.log
+  
+  # add hidden layer to dnn models
+  local H=4
+  for i in $(seq 1 1 $H); do
+    add_hidden_layer 1024
+  done
+  
+  # save dnn models
+  cp $DIR/dnn/models.mmf $DIR/dnn/dnn$(read_numlayers)_hmm.mmf
+}
+
+# finetune
+finetune() {
+  echo "$SCRIPT_NAME -> finetune()"
+  echo "  HNTrainSGD: y"
+  echo
+  
+  # fine tune dnn models
+  HNTrainSGD -A -D -V \
+    -T 1 -C $DIR/dnn_basic.conf -C configs/dnn_finetune.conf \
+    -H $DIR/dnn/models.mmf -M $DIR/dnn \
+    -S $DIR/dnn_trn.scp -N $DIR/dnn_holdout.scp \
+    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
+    $HMMLIST > $DIR/dnn/HNTrainSGD_finetune.log
 }
 
 # ------------------------------------
@@ -194,6 +226,6 @@ add_hidden_layer() {
   state2frame_align
   dnn_init
   holdout_split
-  make_basic_pretrain_conf
+  make_dnn_basic_conf
   pretrain
-  add_hidden_layer
+  finetune
