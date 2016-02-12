@@ -86,9 +86,9 @@ dnn_init() {
     > $DIR/dnn/hhed_dnn_init.log
 }
 
-# heldout_split
-heldout_split() {
-  echo "$SCRIPT_NAME -> heldout_split()"
+# holdout_split
+holdout_split() {
+  echo "$SCRIPT_NAME -> holdout_split()"
   echo
   
   local vSpkr="$(bash ./random_speaker.sh --trn)"
@@ -134,8 +134,58 @@ pretrain() {
     $HMMLIST > $DIR/dnn/hntrainsgd_pretrain.log
 }
 
+# make_addlayer_hed
+make_addlayer_hed() {
+  local level="$1"
+  local prevLevel=$(( level-1 ))
+  local numOfNodes="$2"
+  local thisLayerWeight="layer${level}_weight"
+  local thisLayerFeature="layer${level}_feamix"
+  local thisLayerBias="layer${level}_bias"
+  local lastLayerFeature="layer${prevLevel}_feamix"
+  local lastLayerNodes="$( \
+    cat $DIR/dnn/models.mmf \
+    | grep -B 1 "<FEATURE>" \
+    | grep -A 1 "layer${prevLevel}" \
+    | grep -o " [0-9]*$")"
+  local N_Macro="$(cat $DNN_PROTO | grep '~N')"
+  local activation="SIGMOID"
+  
+  cat <<_EOF_
+AM ~M "$thisLayerWeight" <MATRIX> $numOfNodes $lastLayerNodes
+AV ~V "$thisLayerBias" <VECTOR> $numOfNodes
+IL $N_Macro $level ~L "layer${level}" <BEGINLAYER> <LAYERKIND> "PERCEPTRON" \
+  <INPUTFEATURE> ~F "$lastLayerFeature" <WEIGHT> ~M "$thisLayerWeight" \
+  <BIAS> ~V "$thisLayerBias" <ACTIVATION> "$activation" <ENDLAYER>
+CF ~L "layerout" ~F "$thisLayerFeature" <FEATURE> 1 $numOfNodes \
+  <SOURCE> ~L "layer${level}" <CONTEXTSHIFT> 1 0
+EL ~L "layer${level}"
+EL ~L "layerout"
+_EOF_
+}
+
+# add_hidden_layer
+add_hidden_layer() {
+  echo "$SCRIPT_NAME -> add_hidden_layer()"
+  echo
+  
+  local layers="$(cat $DIR/dnn/models.mmf | grep "<NUMLAYERS>" | grep -o "[0-9]*$")"
+  
+  # save dnn model
+  cp $DIR/dnn/models.mmf $DIR/dnn/dnn${layers}_hmm.mmf
+  
+  # make addlayer_?.hed
+  make_addlayer_hed $((layers ++)) 1000 > $DIR/addlayer_${layers}.hed
+  
+  # add new layer macro to models
+  HHEd -A -D -V \
+    -T 1 -H $DIR/dnn/models.mmf -M $DIR/dnn \
+    $DIR/addlayer_${layers}.hed $HMMLIST \
+    > $DIR/dnn/hhed_add_hidden_layer${layers}.log
+}
+
 # ------------------------------------
-# dnn.sh - train dnn-hmm models
+# dnn_trainning.sh - train dnn-hmm models
 #
 #   $1 : DIR
 # ------------------------------------
@@ -143,7 +193,7 @@ pretrain() {
   setup experiments/step_by_step # $@
   state2frame_align
   dnn_init
-  heldout_split
+  holdout_split
   make_basic_pretrain_conf
   pretrain
-  
+  add_hidden_layer
