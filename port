@@ -50,8 +50,8 @@ port_mac() {
   done
 }
 
-# restore
-restore() {
+# restore_port
+restore_port() {
   echo "$SCRIPT_NAME -> restore"
   echo
   
