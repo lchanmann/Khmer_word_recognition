@@ -98,6 +98,7 @@ __SGD_training() {
   local isConverged=0
   local i=0
   
+  printf "  SGD training."
   while [ "$isConverged" -eq "0" ]; do
     HNTrainSGD -A -D -V -T 1 \
       -c -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
@@ -112,9 +113,12 @@ __SGD_training() {
       | grep "Validation Accuracy" \
       | grep -o "[0-9]*\.[0-9]*%" \
       | perl -p -e "s/%\n/ - /;" \
-      | sed "s/ - $/ >= 0/" | bc)"
+      | perl -p -e "s/ - $/ >= 0\n/" | bc)"
+    printf "."
   done
-  echo "  SGD training converged at $i iteration(s)."
+  
+  echo "  : converged at $i iteration(s)."
+  echo
 }
 
 # construct dnn hmm model
@@ -193,7 +197,7 @@ add_hidden_layer() {
   # add new layer macro to models
   HHEd -A -D -V \
     -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
-    $DIR/addlayer_${layers}.hed $HMMLIST \
+    $DIR/dnn/addlayer_${layers}.hed $HMMLIST \
     > $DIR/dnn/HHEd_add_hidden_layer${layers}.log
   
   # re-train dnn after adding a new hidden layer
@@ -217,9 +221,9 @@ pretrain() {
   # training dnn-hmm models
   __SGD_training
   
-  # add 2 hidden layers to dnn models
-  add_hidden_layer $DNN_HIDDEN_NODES
-  add_hidden_layer $DNN_HIDDEN_NODES
+  # # add 2 hidden layers to dnn models
+  # add_hidden_layer $DNN_HIDDEN_NODES
+  # add_hidden_layer $DNN_HIDDEN_NODES
 
   # save dnn models
   cp $DNN_MODELS_MMF $DIR/dnn/dnn$(__read_numlayers)_hmm.mmf
@@ -246,9 +250,9 @@ finetune() {
   
   # fine tune dnn models
   HNTrainSGD -A -D -V \
-    -T 1 -C $DIR/dnn_basic.conf -C configs/dnn_finetune.conf \
+    -T 1 -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
     -H $DNN_MODELS_MMF -M $DIR/dnn \
-    -S $DIR/dnn_trn.scp -N $DIR/dnn_holdout.scp \
+    -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
     -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
     $HMMLIST > $DIR/dnn/HNTrainSGD_finetune.log
 }
@@ -260,9 +264,9 @@ finetune() {
 # ------------------------------------
 
   setup experiments/step_by_step # $@
-  state2frame_align
-  holdout_split
-  dnn_init
-  pretrain
+  # state2frame_align
+  # holdout_split
+  # dnn_init
+  # pretrain
   # context_independent_init
-  # finetune
+  finetune
