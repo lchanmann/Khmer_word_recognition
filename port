@@ -12,11 +12,12 @@
 set -e
 
 # E_VARS
-E_USAGE="Usage: $0 (ubuntu | mac)"
+E_USAGE="Usage: $0 (ubuntu | mac | restore)"
 
 # global variables
 SCRIPT_NAME=$0
 OS=
+BACKUP="port.backup"
 
 # show usage
 show_usage() {
@@ -28,10 +29,10 @@ port_ubuntu() {
   echo "$SCRIPT_NAME -> port_ubuntu"
   echo
   
-  mkdir "port_backup"
+  mkdir "$BACKUP"
   ls *.sh | while read file; do
-    mv $file "port_backup/$file"
-    sed "s/sort -u/sort -uV/g" "port_backup/$file" > $file
+    mv $file "$BACKUP/$file"
+    sed "s/sort -u/sort -uV/g" "$BACKUP/$file" > $file
     chmod a+x $file
   done
 }
@@ -41,12 +42,23 @@ port_mac() {
   echo "$SCRIPT_NAME -> port_mac"
   echo
   
-  mkdir "port_backup"
+  mkdir "$BACKUP"
   ls *.sh | while read file; do
-    mv $file "port_backup/$file"
-    sed "s/sort -uV/sort -u/g" "port_backup/$file" > $file
+    mv $file "$BACKUP/$file"
+    sed "s/sort -uV/sort -u/g" "$BACKUP/$file" > $file
     chmod a+x $file
   done
+}
+
+# restore
+restore() {
+  echo "$SCRIPT_NAME -> restore"
+  echo
+  
+  if [ -d "$BACKUP" ]; then
+    mv $BACKUP/*.sh ./
+    rm -r $BACKUP
+  fi
 }
 
 # main
@@ -56,6 +68,7 @@ main() {
   case ${OS} in
     "ubuntu" ) port_ubuntu;;
     "mac"    ) port_mac;;
+    "restore") restore_port;;
     *        ) show_usage
   esac
 }
