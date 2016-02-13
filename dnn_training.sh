@@ -16,13 +16,6 @@ E_USAGE="Usage: $0 \$directory"
 
 # global variables
 SCRIPT_NAME=$0
-DIR=
-MFCLIST=
-MODELS_MMF=
-HMMLIST=
-DNN_PROTO=
-CONNECT_HED=
-DNN_TRAIN_ALIGNED_MLF=
 
 # show usage
 show_usage() {
@@ -37,11 +30,17 @@ setup() {
   MODELS_MMF="$DIR/models/models.mmf"
   HMMLIST="$DIR/hmmlist"
   DNN_PROTO="$DIR/dnn/proto"
-  CONNECT_HED="$DIR/dnn/connect.hed"
+  DNN_MODELS_MMF="$DIR/dnn/models.mmf"
   DNN_TRAIN_ALIGNED_MLF="$DIR/dnn/train.aligned.mlf"
-  
+  DNN_CONNECT_HED="$DIR/dnn/connect.hed"
+  DNN_HOLDOUT_SCP="$DIR/dnn/holdout.scp"
+  DNN_TRAINING_SCP="$DIR/dnn/training.scp"
+  DNN_CVN="$DIR/dnn/cvn"
+  DNN_BASIC_CONF="$DIR/dnn/basic.conf"
+  DNN_HIDDEN_NODES=1024
+
   mkdir -p $DIR/dnn
-  mkdir -p $DIR/cvn
+  mkdir -p $DNN_CVN
   
   # stdout
   echo "$SCRIPT_NAME -> setup()"
@@ -55,35 +54,13 @@ state2frame_align() {
   echo "  HVite: y"
   echo
   
-  # viterbi alignment # -m -b SIL -o SW -y lab \
+  # viterbi alignment
   HVite -A -D -V \
     -T 1 -a -l '*' -I labels/words.mlf -i $DNN_TRAIN_ALIGNED_MLF \
     -C configs/hvite.conf -f -o MW -b SIL -y lab \
     -S $MFCLIST -H $MODELS_MMF \
     dictionary/dictionary.dct.withsil $HMMLIST \
-    > $DIR/dnn/hvite_state2frame_align.log
-}
-
-# construct dnn prototype model
-dnn_init() {
-  echo "$SCRIPT_NAME -> dnn_init()"
-  echo "  HHEd: y"
-  echo "  write: $DNN_PROTO"
-  echo "  write: $DIR/connect.hed"
-  echo
-  
-  # intialize 3 layer dnn prototype model
-  python python/GenInitDNN.py --quiet \
-    hte_files/dnn3.hte $DNN_PROTO
-  
-  # make_connect_hed
-  bash ./make_connect_hed.sh $DNN_PROTO
-  
-  # associate DNN and HMM
-  HHEd -A -D -V \
-    -T 1 -H $MODELS_MMF -M $DIR/dnn \
-    $CONNECT_HED $HMMLIST \
-    > $DIR/dnn/hhed_dnn_init.log
+    > $DIR/dnn/HVite_state2frame_align.log
 }
 
 # holdout_split
@@ -92,28 +69,78 @@ holdout_split() {
   echo
   
   local vSpkr="$(bash ./random_speaker.sh --trn)"
-  cat $MFCLIST | grep ${vSpkr} > $DIR/dnn_holdout.scp
-  cat $MFCLIST | grep -v ${vSpkr} > $DIR/dnn_trn.scp
+  cat $MFCLIST | grep ${vSpkr} > $DNN_HOLDOUT_SCP
+  cat $MFCLIST | grep -v ${vSpkr} > $DNN_TRAINING_SCP
 }
 
-# make_dnn_basic_conf
-make_dnn_basic_conf() {
-  echo "$SCRIPT_NAME -> make_dnn_basic_conf()"
+# __make_connect_hed
+__make_connect_hed() {
+  local N_Macro="$(cat $DNN_PROTO | grep '~N')"
+  
+  echo "CH $DNN_PROTO models/empty $N_Macro <HYBRID>"
+  echo "SW 1 39"
+  echo "SK MFCC_0_D_A_Z"
+  cat $DNN_PROTO | grep '~L' | sort -u | sed "s/^/EL /"
+  echo
+}
+
+# __make_basic_conf
+__make_basic_conf() {
+  echo "TARGETKIND = MFCC_0_D_A_Z"
+  echo "HPARM: VARSCALEDIR = $DNN_CVN"
+  echo "HPARM: VARSCALEMASK = '*.%%%'"
+  echo "HPARM: VARSCALEFN = models/ident_MFCC_0_D_A_Z_cvn"
+}
+
+# __SGD_training - Stochastic Gradient Descent training
+__SGD_training() {
+  local callerFuncName="$(caller 0 | grep -o " .* " | sed "s/ //g")"
+  local isConverged=0
+  local i=0
+  
+  while [ "$isConverged" -eq 0 ]; do
+    HNTrainSGD -A -D -V -T 1 \
+      -c -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
+      -H $DNN_MODELS_MMF -M $DIR/dnn \
+      -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
+      -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
+      $HMMLIST > $DIR/dnn/HNTrainSGD_${callerFuncName}.log
+    
+    i=$(( i+1 ))
+    # check for convergence
+    isConverged="$(cat $DIR/dnn/HNTrainSGD_pretrain.log \
+      | grep "Validation Accuracy" \
+      | grep -o "[0-9]*\.[0-9]*%" \
+      | perl -p -e "s/%\n/ - /;" \
+      | sed "s/ - $/ >= 0/" | bc)"
+  done
+  echo "  SGD training converged at $i iteration(s)."
+}
+
+# construct dnn hmm model
+dnn_init() {
+  echo "$SCRIPT_NAME -> dnn_init()"
+  echo "  HHEd: y"
+  echo "  write: $DNN_PROTO"
+  echo "  write: $DNN_CONNECT_HED"
   echo
   
-  local targetKind="TARGETKIND = MFCC_0_D_A_Z"
-  local varScaleDir="HPARM: VARSCALEDIR = $DIR/cvn"
-  local varScaleMask="HPARM: VARSCALEMASK = '*.%%%'"
-  local varScaleFn="HPARM: VARSCALEFN = models/ident_MFCC_0_D_A_Z_cvn"
+  # intialize 3 layer dnn prototype model
+  python python/GenInitDNN.py --quiet \
+    hte_files/dnn3.hte $DNN_PROTO
   
-  echo ${targetKind}   > $DIR/dnn_basic.conf
-  echo ${varScaleDir}  >> $DIR/dnn_basic.conf
-  echo ${varScaleMask} >> $DIR/dnn_basic.conf
-  echo ${varScaleFn}   >> $DIR/dnn_basic.conf
+  # make connect.hed and basic.conf
+  __make_connect_hed > $DNN_CONNECT_HED
+  
+  # associate DNN and HMM
+  HHEd -A -D -V \
+    -T 1 -H $MODELS_MMF -M $DIR/dnn \
+    $DNN_CONNECT_HED $HMMLIST \
+    > $DIR/dnn/HHEd_dnn_init.log
 }
 
-# make_addlayer_hed
-make_addlayer_hed() {
+# __make_addlayer_hed
+__make_addlayer_hed() {
   local level="$1"
   local prevLevel=$(( level-1 ))
   local numOfNodes="$2"
@@ -122,13 +149,14 @@ make_addlayer_hed() {
   local thisLayerBias="layer${level}_bias"
   local lastLayerFeature="layer${prevLevel}_feamix"
   local lastLayerNodes="$( \
-    cat $DIR/dnn/models.mmf \
+    cat $DNN_MODELS_MMF \
     | grep -B 1 "<FEATURE>" \
     | grep -A 1 "layer${prevLevel}" \
     | grep -o " [0-9]*$")"
   local N_Macro="$(cat $DNN_PROTO | grep '~N')"
   local activation="SIGMOID"
   
+  # CD ~L "layerout" 0 $numOfNodes
   cat <<_EOF_
 AM ~M "$thisLayerWeight" <MATRIX> $numOfNodes $lastLayerNodes
 AV ~V "$thisLayerBias" <VECTOR> $numOfNodes
@@ -138,15 +166,14 @@ IL $N_Macro $level ~L "layer${level}" <BEGINLAYER> <LAYERKIND> "PERCEPTRON" \
 AF ~F "$thisLayerFeature" <NUMFEATURES> 1 $numOfNodes <FEATURE> 1 $numOfNodes \
   <SOURCE> ~L "layer${level}" <CONTEXTSHIFT> 1 0
 CF ~L "layerout" ~F "$thisLayerFeature"
-CD ~L "layerout" 0 $numOfNodes
 EL ~L "layer${level}"
 EL ~L "layerout"
 _EOF_
 }
 
-# read_numlayers
-read_numlayers() {
-  cat $DIR/dnn/models.mmf \
+# __read_numlayers
+__read_numlayers() {
+  cat $DNN_MODELS_MMF \
     | grep "<NUMLAYERS>" \
     | grep -o "[0-9]*$"
 }
@@ -158,47 +185,57 @@ add_hidden_layer() {
   echo
   
   local numOfNodes="$1"
-  local layers="$(read_numlayers)"
+  local layers="$(__read_numlayers)"
   
   # make addlayer_?.hed
-  make_addlayer_hed $((layers ++)) $numOfNodes > $DIR/addlayer_${layers}.hed
+  __make_addlayer_hed $((layers ++)) $numOfNodes > $DIR/addlayer_${layers}.hed
   
   # add new layer macro to models
   HHEd -A -D -V \
-    -T 1 -H $DIR/dnn/models.mmf -M $DIR/dnn \
+    -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
     $DIR/addlayer_${layers}.hed $HMMLIST \
-    > $DIR/dnn/hhed_add_hidden_layer${layers}.log
+    > $DIR/dnn/HHEd_add_hidden_layer${layers}.log
+  
+  # re-train dnn after adding a new hidden layer
+  __SGD_training
 }
 
 # pretrain
 pretrain() {
   echo "$SCRIPT_NAME -> pretrain()"
-  echo "  HCompV: y"
-  echo "  HNTrainSGD: y"
   echo
   
-  # generate variable vector for unit variance normalization
+  # make basic.conf
+  __make_basic_conf > $DNN_BASIC_CONF
+  
+  # compute global variance for unit variance normalization
   HCompV -A -D -V -T 3 \
     -k "*.%%%" -C configs/hcompv.conf \
-    -q v -c $DIR/cvn \
-    -S $MFCLIST > $DIR/dnn/hcompv_pretrain.log
+    -q v -c $DNN_CVN \
+    -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
+  
+  # training dnn-hmm models
+  __SGD_training
+  
+  # add 2 hidden layers to dnn models
+  add_hidden_layer $DNN_HIDDEN_NODES
+  add_hidden_layer $DNN_HIDDEN_NODES
 
-  # discriminative pre-train to add new hidden layer gruadually
-  HNTrainSGD -A -D -V \
-    -T 1 -C $DIR/dnn_basic.conf -C configs/dnn_pretrain.conf \
-    -H $DIR/dnn/models.mmf -M $DIR/dnn \
-    -S $DIR/dnn_trn.scp -N $DIR/dnn_holdout.scp \
-    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
-    $HMMLIST > $DIR/dnn/HNTrainSGD_pretrain.log
-  
-  # add hidden layer to dnn models
-  local H=4
-  for i in $(seq 1 1 $H); do
-    add_hidden_layer 1024
-  done
-  
   # save dnn models
-  cp $DIR/dnn/models.mmf $DIR/dnn/dnn$(read_numlayers)_hmm.mmf
+  cp $DNN_MODELS_MMF $DIR/dnn/dnn$(__read_numlayers)_hmm.mmf
+}
+
+# context_independent_init
+context_independent_init() {
+  echo "$SCRIPT_NAME -> context_independent_init()"
+  echo "  HHEd: y"
+  echo
+  
+  # monophone dnn -> triphone dnn
+  HHEd -A -D -V \
+    -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
+    configs/context_independent_init.hed $HMMLIST \
+    > $DIR/dnn/HHEd_context_independent_init.log
 }
 
 # finetune
@@ -210,7 +247,7 @@ finetune() {
   # fine tune dnn models
   HNTrainSGD -A -D -V \
     -T 1 -C $DIR/dnn_basic.conf -C configs/dnn_finetune.conf \
-    -H $DIR/dnn/models.mmf -M $DIR/dnn \
+    -H $DNN_MODELS_MMF -M $DIR/dnn \
     -S $DIR/dnn_trn.scp -N $DIR/dnn_holdout.scp \
     -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
     $HMMLIST > $DIR/dnn/HNTrainSGD_finetune.log
@@ -224,8 +261,8 @@ finetune() {
 
   setup experiments/step_by_step # $@
   state2frame_align
-  dnn_init
   holdout_split
-  make_dnn_basic_conf
+  dnn_init
   pretrain
-  finetune
+  # context_independent_init
+  # finetune

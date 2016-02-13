@@ -1,0 +1,3 @@
+CP <HMMSET> experiments/step_by_step/dnn/models.mmf experiments/step_by_step/monolist <UPDATEFLAG> abw <SOURCEMACRO> ~L "layer2" <TARGETMACRO> ~L "layer2"
+CP <HMMSET> experiments/step_by_step/dnn/models.mmf experiments/step_by_step/monolist <UPDATEFLAG> abw <SOURCEMACRO> ~L "layer2" <TARGETMACRO> ~L "layer3"
+CP <HMMSET> experiments/step_by_step/dnn/models.mmf experiments/step_by_step/monolist <UPDATEFLAG> abw <SOURCEMACRO> ~L "layer2" <TARGETMACRO> ~L "layer4"

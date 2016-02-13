@@ -1,12 +1,8 @@
 #!/bin/sh
 
-# -----------------------------------
-# Project   : Khmer_word_recognition
-# Author    : Chanmann Lim
-#
-# Changelogs:
-#   - 02/10/2016  : file created.
-# -----------------------------------
+# -----------------------------------------#
+# Khmer_word_recognition       02/10/2016  #
+# -----------------------------------------#
 
 # exit on error
 set -e
@@ -17,8 +13,6 @@ E_USAGE="Usage: $0 \$dnn_proto"
 # global variables
 SCRIPT_NAME=$0
 DNN_PROTO=
-DIR=
-CONNECT_HED=
 
 # show usage
 show_usage() {
@@ -28,7 +22,6 @@ show_usage() {
 # ch_command
 ch_command() {
   local N_Macro="$(cat $DNN_PROTO | grep '~N')"
-  touch $DIR/emtpy
   echo "CH $DNN_PROTO models/empty $N_Macro <HYBRID>"
 }
 
@@ -51,14 +44,12 @@ el_command() {
 main() {
   bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   DNN_PROTO=$1
-  DIR=$(dirname $1)
-  CONNECT_HED="$DIR/connect.hed"
-  
-  echo "$(ch_command)" >  $CONNECT_HED
-  echo "$(sw_command)" >> $CONNECT_HED
-  echo "$(sk_command)" >> $CONNECT_HED
-  printf "$(el_command)" >> $CONNECT_HED
-  echo >> $CONNECT_HED
+    
+  echo "$(ch_command)"
+  echo "$(sw_command)"
+  echo "$(sk_command)"
+  printf "$(el_command)"
+  echo
 }
 
 # ------------------------------------
@@ -67,5 +58,5 @@ main() {
 #   $1 : DNN_PROTO
 # ------------------------------------
 
-  main experiments/step_by_step/dnn/proto # $@
+  main $@
   
