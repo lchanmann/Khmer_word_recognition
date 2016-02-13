@@ -109,7 +109,7 @@ __SGD_training() {
     
     i=$(( i+1 ))
     # check for convergence
-    isConverged="$(cat $DIR/dnn/HNTrainSGD_pretrain.log \
+    isConverged="$(cat $DIR/dnn/HNTrainSGD_${callerFuncName}.log \
       | grep "Validation Accuracy" \
       | grep -o "[0-9]*\.[0-9]*%" \
       | perl -p -e "s/%\n/ - /;" \
@@ -222,7 +222,7 @@ pretrain() {
   __SGD_training
   
   # # add 2 hidden layers to dnn models
-  # add_hidden_layer $DNN_HIDDEN_NODES
+  add_hidden_layer $DNN_HIDDEN_NODES
   # add_hidden_layer $DNN_HIDDEN_NODES
 
   # save dnn models
@@ -265,7 +265,7 @@ finetune() {
 
   setup experiments/step_by_step # $@
   state2frame_align
-  holdout_split
+  # holdout_split
   dnn_init
   pretrain
   # context_independent_init
