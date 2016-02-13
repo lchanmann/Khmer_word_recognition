@@ -264,9 +264,9 @@ finetune() {
 # ------------------------------------
 
   setup experiments/step_by_step # $@
-  # state2frame_align
-  # holdout_split
-  # dnn_init
-  # pretrain
+  state2frame_align
+  holdout_split
+  dnn_init
+  pretrain
   # context_independent_init
   finetune
