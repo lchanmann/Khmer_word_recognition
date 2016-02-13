@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # -----------------------------------
 # Project   : Khmer_word_recognition
@@ -98,7 +98,7 @@ __SGD_training() {
   local isConverged=0
   local i=0
   
-  while [ "$isConverged" -eq 0 ]; do
+  while [ "$isConverged" -eq "0" ]; do
     HNTrainSGD -A -D -V -T 1 \
       -c -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
       -H $DNN_MODELS_MMF -M $DIR/dnn \
@@ -188,7 +188,7 @@ add_hidden_layer() {
   local layers="$(__read_numlayers)"
   
   # make addlayer_?.hed
-  __make_addlayer_hed $((layers ++)) $numOfNodes > $DIR/addlayer_${layers}.hed
+  __make_addlayer_hed $((layers ++)) $numOfNodes > $DIR/dnn/addlayer_${layers}.hed
   
   # add new layer macro to models
   HHEd -A -D -V \
