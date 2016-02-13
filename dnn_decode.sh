@@ -16,10 +16,6 @@ E_USAGE="Usage: $0 \$directory"
 
 # global variables
 SCRIPT_NAME=$0
-DIR=
-HMMLIST=
-MFCLIST=
-MODELS_MMF=
 
 # show usage
 show_usage() {
@@ -32,9 +28,10 @@ setup() {
   DIR="$1"
   HMMLIST="$DIR/hmmlist"
   MFCLIST="$DIR/mfclist_tst"
-  MODELS_MMF="$DIR/dnn/models.mmf"
+  DNN_MODELS_MMF="$DIR/dnn/models.mmf"
+  DNN_RESULTS="$DIR/dnn/results"
 
-  mkdir -p $DIR/dnn_results
+  mkdir -p $DNN_RESULTS
 
   # stdout
   echo "$SCRIPT_NAME -> setup()"
@@ -44,20 +41,20 @@ setup() {
 # viterbi_decode
 viterbi_decode() {
   echo "$SCRIPT_NAME -> viterbi_decode()"
-  echo "  \$models: $MODELS_MMF"
+  echo "  \$models: $DNN_MODELS_MMF"
   echo
 
   # viterbi decoding
   HVite -A -D -V \
-    -T 1 -l '*' -i $DIR/dnn_results/output.mlf \
+    -T 5 -l '*' -i $DNN_RESULTS/output.mlf \
     -C configs/hvite.conf -z zoo -q Atvaldmnr -s 2.4 -p -1.2 \
-    -S $MFCLIST -H $MODELS_MMF -w lm/word_network.lat \
-    dictionary/dictionary.dct $HMMLIST > $DIR/dnn_results/HVite_viterbi_decoding.log
+    -S $MFCLIST -H $DNN_MODELS_MMF -w lm/word_network.lat \
+    dictionary/dictionary.dct $HMMLIST > $DNN_RESULTS/HVite_viterbi_decoding.log
 
   # generate result statistics
   HResults \
-    -f -I labels/words.mlf /dev/null $DIR/dnn_results/output.mlf \
-    > $DIR/dnn_results/result.log
+    -f -I labels/words.mlf /dev/null $DNN_RESULTS/output.mlf \
+    > $DNN_RESULTS/result.log
 }
 
 # ------------------------------------
