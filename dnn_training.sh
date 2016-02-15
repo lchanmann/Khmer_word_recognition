@@ -16,6 +16,7 @@ E_USAGE="Usage: $0 \$directory"
 
 # global variables
 SCRIPT_NAME=$0
+DNN_HIDDEN_NODES=1024
 
 # show usage
 show_usage() {
@@ -37,7 +38,6 @@ setup() {
   DNN_TRAINING_SCP="$DIR/dnn/training.scp"
   DNN_CVN="$DIR/dnn/cvn"
   DNN_BASIC_CONF="$DIR/dnn/basic.conf"
-  DNN_HIDDEN_NODES=1024
 
   mkdir -p $DIR/dnn
   mkdir -p $DNN_CVN
@@ -94,7 +94,7 @@ __make_basic_conf() {
 
 # __SGD_training - Stochastic Gradient Descent training
 __SGD_training() {
-  local callerFuncName="$(caller 0 | grep -o " .* " | sed "s/ //g")"
+  local callerFuncName=$(caller 0 | sed "s/^[0-9]* \([0-9a-zA-Z_]*\) .*/\1/")
   local isConverged=0
   local i=0
   
@@ -190,6 +190,12 @@ add_hidden_layer() {
   
   local numOfNodes="$1"
   local layers="$(__read_numlayers)"
+  local pretrainModels="$DIR/dnn/dnn${layers}_pretrain.mmf"
+  
+  # add layer to pretrain models but not the already fine-tuned one
+  if [ -a "$pretrainModels" ]; then
+    cp $pretrainModels $DNN_MODELS_MMF
+  fi
   
   # make addlayer_?.hed
   __make_addlayer_hed $((layers ++)) $numOfNodes > $DIR/dnn/addlayer_${layers}.hed
@@ -220,13 +226,6 @@ pretrain() {
   
   # training dnn-hmm models
   __SGD_training
-  
-  # # add 2 hidden layers to dnn models
-  add_hidden_layer $DNN_HIDDEN_NODES
-  # add_hidden_layer $DNN_HIDDEN_NODES
-
-  # save dnn models
-  cp $DNN_MODELS_MMF $DIR/dnn/dnn$(__read_numlayers)_hmm.mmf
 }
 
 # context_independent_init
@@ -248,6 +247,11 @@ finetune() {
   echo "  HNTrainSGD: y"
   echo
   
+  local layers="$(__read_numlayers)"
+  
+  # save dnn pretrain models before fine-tuning
+  cp $DNN_MODELS_MMF $DIR/dnn/dnn${layers}_pretrain.mmf
+  
   # fine tune dnn models
   HNTrainSGD -A -D -V \
     -T 1 -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
@@ -255,6 +259,9 @@ finetune() {
     -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
     -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
     $HMMLIST > $DIR/dnn/HNTrainSGD_finetune.log
+  
+  # save dnn fine-tuned models
+  cp $DNN_MODELS_MMF $DIR/models/dnn_${layers}_hmm.mmf
 }
 
 # ------------------------------------
@@ -265,8 +272,10 @@ finetune() {
 
   setup experiments/step_by_step # $@
   state2frame_align
-  # holdout_split
+  holdout_split
   dnn_init
-  pretrain
-  # context_independent_init
-  finetune
+  pretrain && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune

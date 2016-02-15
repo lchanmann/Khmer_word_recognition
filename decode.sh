@@ -46,7 +46,7 @@ viterbi_decode() {
   echo
 
   local models=$1
-  local num=$(basename $models | sed -e "s/gmm_//" -e "s/_hmm.mmf//")
+  local num=$(basename $models | sed "s/.*_\([0-9]*\)_hmm.mmf$/\1/")
 
   # viterbi decoding
   HVite -A -D -V \
