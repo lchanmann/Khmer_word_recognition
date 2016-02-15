@@ -32,6 +32,7 @@ setup() {
   HMMLIST="$DIR/hmmlist"
   DNN_PROTO="$DIR/dnn/proto"
   DNN_MODELS_MMF="$DIR/dnn/models.mmf"
+  __BEFORE_CONVERGED_MMF="$DIR/dnn/__before_converged.mmf"
   DNN_TRAIN_ALIGNED_MLF="$DIR/dnn/train.aligned.mlf"
   DNN_CONNECT_HED="$DIR/dnn/connect.hed"
   DNN_HOLDOUT_SCP="$DIR/dnn/holdout.scp"
@@ -100,6 +101,7 @@ __SGD_training() {
   
   printf "  SGD training."
   while [ "$isConverged" -eq "0" ]; do
+    cp $DNN_MODELS_MMF $__BEFORE_CONVERGED_MMF
     HNTrainSGD -A -D -V -T 1 \
       -c -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
       -H $DNN_MODELS_MMF -M $DIR/dnn \
@@ -113,9 +115,11 @@ __SGD_training() {
       | grep "Validation Accuracy" \
       | grep -o "[0-9]*\.[0-9]*%" \
       | perl -p -e "s/%\n/ - /;" \
-      | perl -p -e "s/ - $/ >= 0\n/" | bc)"
+      | perl -p -e "s/ - $/ > 0\n/" | bc)"
     printf "."
   done
+  # use dnn models before training converged
+  cp $__BEFORE_CONVERGED_MMF $DNN_MODELS_MMF
   
   echo "  : converged at $i iteration(s)."
   echo
@@ -272,7 +276,7 @@ finetune() {
 
   setup experiments/step_by_step # $@
   state2frame_align
-  holdout_split
+  # holdout_split
   dnn_init
   pretrain && finetune
   add_hidden_layer $DNN_HIDDEN_NODES && finetune
