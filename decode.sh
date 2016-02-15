@@ -72,7 +72,7 @@ recognize() {
 show_progress() {
   local M=$(ls $DIR/models | grep -c "hmm.mmf")
   local testSet=$(cat $DIR/mfclist_tst | grep -c "")
-  local total=$(( M*(testSet*2+3) ))
+  local total=$(( M*(testSet) ))
   local current=
   local progress=
   local progressBar=
@@ -81,7 +81,7 @@ show_progress() {
 
   while true; do
     sleep $refreshInterval
-    current=$(cat $DIR/results/hvite_*.log | grep -c "")
+    current=$(cat $DIR/results/hvite_*.log | grep -c "^File:")
     progress=$((current*100/total))
 
     progressBar="$dot ($progress%%)"
