@@ -81,11 +81,11 @@ show_progress() {
 
   while true; do
     sleep $refreshInterval
-    current=$(cat $DIR/results/hvite_*.log | grep -c "^File:")
+    current="$(cat $DIR/results/hvite_*.log | grep -c "^File:")"
     progress=$((current*100/total))
 
     progressBar="$dot ($progress%%)"
-    if [ $progress -gt 0 ]; then
+    if [ "$progress" -gt "0" ]; then
       progressBar=$(echo $progressBar | sed "s/./#/$progress"); fi
     printf "$progressBar\r"
 
