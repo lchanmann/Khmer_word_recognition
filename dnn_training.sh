@@ -119,7 +119,7 @@ __SGD_training() {
     printf "."
   done
   # use dnn models before training converged
-  cp $__BEFORE_CONVERGED_MMF $DNN_MODELS_MMF
+  mv $__BEFORE_CONVERGED_MMF $DNN_MODELS_MMF
   
   echo "  : converged at $i iteration(s)."
   echo
@@ -227,7 +227,7 @@ pretrain() {
     -k "*.%%%" -C configs/hcompv.conf \
     -q v -c $DNN_CVN \
     -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
-  
+
   # training dnn-hmm models
   __SGD_training
 }
