@@ -220,9 +220,6 @@ add_hidden_layer() {
     -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
     $DIR/dnn/addlayer_${layers}.hed $HMMLIST \
     > $DIR/dnn/HHEd_add_hidden_layer${layers}.log
-  
-  # re-train dnn after adding a new hidden layer
-  __SGD_training
 }
 
 # pretrain
@@ -240,10 +237,7 @@ pretrain() {
     -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
   
   # training dnn-hmm models
-  __SGD_training 7
-  
-  # save training criterion
-  bash ./save_training_criterion.sh "$DIR/dnn/HNTrainSGD/pretrain.*.log" $DNN_TRAINING_CRITERION_DATA
+  __SGD_training
 }
 
 # context_independent_init
@@ -282,19 +276,29 @@ finetune() {
   cp $DNN_MODELS_MMF $DIR/models/dnn_${layers}_hmm.mmf
 }
 
+# make_training_criterion_test
+make_training_criterion_test() {
+  echo "$SCRIPT_NAME -> make_training_criterion_test()"
+  echo
+  
+  add_hidden_layer $DNN_HIDDEN_NODES && __SGD_training
+  add_hidden_layer $DNN_HIDDEN_NODES && __SGD_training 200
+  # add_hidden_layer $DNN_HIDDEN_NODES
+  # add_hidden_layer $DNN_HIDDEN_NODES
+  
+  # save training criterion
+  bash ./save_training_criterion.sh "$DIR/dnn/HNTrainSGD/add_hidden_layer.*.log" $DNN_TRAINING_CRITERION_DATA
+}
+
 # ------------------------------------
 # dnn_trainning.sh - train dnn-hmm models
 #
 #   $1 : DIR
 # ------------------------------------
 
-  setup experiments/step_by_step # $@
+  setup "$@"
   # state2frame_align
   # holdout_split
   dnn_init
   pretrain # && fineetune
-#   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-#   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-#   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-#   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  
+  make_training_criterion_test
