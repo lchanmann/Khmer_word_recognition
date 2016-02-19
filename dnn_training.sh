@@ -31,6 +31,7 @@ setup() {
   MODELS_MMF="$DIR/models/models.mmf"
   HMMLIST="$DIR/hmmlist"
   DNN_PROTO="$DIR/dnn/proto"
+  DNN_INIT_MMF="$DIR/dnn/init.mmf"
   DNN_MODELS_MMF="$DIR/dnn/models.mmf"
   __BEFORE_CONVERGED_MMF="$DIR/dnn/__before_converged.mmf"
   DNN_TRAIN_ALIGNED_MLF="$DIR/dnn/train.aligned.mlf"
@@ -52,31 +53,6 @@ setup() {
   echo
 }
 
-# state-to-frame alignment
-state2frame_align() {
-  echo "$SCRIPT_NAME -> state2frame_align()"
-  echo "  HVite: y"
-  echo
-  
-  # viterbi alignment
-  HVite -A -D -V \
-    -T 1 -a -l '*' -I labels/words.mlf -i $DNN_TRAIN_ALIGNED_MLF \
-    -C configs/hvite.conf -f -o MW -b SIL -y lab \
-    -S $MFCLIST -H $MODELS_MMF \
-    dictionary/dictionary.dct.withsil $HMMLIST \
-    > $DIR/dnn/HVite_state2frame_align.log
-}
-
-# holdout_split
-holdout_split() {
-  echo "$SCRIPT_NAME -> holdout_split()"
-  echo
-  
-  local vSpkr="$(bash ./random_speaker.sh --trn)"
-  cat $MFCLIST | grep ${vSpkr} > $DNN_HOLDOUT_SCP
-  cat $MFCLIST | grep -v ${vSpkr} > $DNN_TRAINING_SCP
-}
-
 # __make_connect_hed
 __make_connect_hed() {
   local N_Macro="$(cat $DNN_PROTO | grep '~N')"
@@ -94,6 +70,45 @@ __make_basic_conf() {
   echo "HPARM: VARSCALEDIR = $DNN_CVN"
   echo "HPARM: VARSCALEMASK = '*.%%%'"
   echo "HPARM: VARSCALEFN = models/ident_MFCC_0_D_A_Z_cvn"
+}
+
+# __make_addlayer_hed
+__make_addlayer_hed() {
+  local level="$1"
+  local prevLevel=$(( level-1 ))
+  local numOfNodes="$2"
+  local thisLayerWeight="layer${level}_weight"
+  local thisLayerFeature="layer${level}_feamix"
+  local thisLayerBias="layer${level}_bias"
+  local lastLayerFeature="layer${prevLevel}_feamix"
+  local lastLayerNodes="$( \
+    cat $DNN_MODELS_MMF \
+    | grep -B 1 "<FEATURE>" \
+    | grep -A 1 "layer${prevLevel}" \
+    | grep -o " [0-9]*$")"
+  local N_Macro="$(cat $DNN_PROTO | grep '~N')"
+  local activation="SIGMOID"
+  
+  # CD ~L "layerout" 0 $numOfNodes
+  cat <<_EOF_
+AM ~M "$thisLayerWeight" <MATRIX> $numOfNodes $lastLayerNodes
+AV ~V "$thisLayerBias" <VECTOR> $numOfNodes
+IL $N_Macro $level ~L "layer${level}" <BEGINLAYER> <LAYERKIND> "PERCEPTRON" \
+  <INPUTFEATURE> ~F "$lastLayerFeature" <WEIGHT> ~M "$thisLayerWeight" \
+  <BIAS> ~V "$thisLayerBias" <ACTIVATION> "$activation" <ENDLAYER>
+AF ~F "$thisLayerFeature" <NUMFEATURES> 1 $numOfNodes <FEATURE> 1 $numOfNodes \
+  <SOURCE> ~L "layer${level}" <CONTEXTSHIFT> 1 0
+CF ~L "layerout" ~F "$thisLayerFeature"
+EL ~L "layer${level}"
+EL ~L "layerout"
+_EOF_
+}
+
+# __read_numlayers
+__read_numlayers() {
+  cat $DNN_MODELS_MMF \
+    | grep "<NUMLAYERS>" \
+    | grep -o "[0-9]*$"
 }
 
 # __SGD_training - Stochastic Gradient Descent training
@@ -136,6 +151,31 @@ __SGD_training() {
   echo
 }
 
+# state-to-frame alignment
+state2frame_align() {
+  echo "$SCRIPT_NAME -> state2frame_align()"
+  echo "  HVite: y"
+  echo
+  
+  # viterbi alignment
+  HVite -A -D -V \
+    -T 1 -a -l '*' -I labels/words.mlf -i $DNN_TRAIN_ALIGNED_MLF \
+    -C configs/hvite.conf -f -o MW -b SIL -y lab \
+    -S $MFCLIST -H $MODELS_MMF \
+    dictionary/dictionary.dct.withsil $HMMLIST \
+    > $DIR/dnn/HVite_state2frame_align.log
+}
+
+# holdout_split
+holdout_split() {
+  echo "$SCRIPT_NAME -> holdout_split()"
+  echo
+  
+  local vSpkr="$(bash ./random_speaker.sh --trn)"
+  cat $MFCLIST | grep ${vSpkr} > $DNN_HOLDOUT_SCP
+  cat $MFCLIST | grep -v ${vSpkr} > $DNN_TRAINING_SCP
+}
+
 # construct dnn hmm model
 dnn_init() {
   echo "$SCRIPT_NAME -> dnn_init()"
@@ -156,45 +196,9 @@ dnn_init() {
     -T 1 -H $MODELS_MMF -M $DIR/dnn \
     $DNN_CONNECT_HED $HMMLIST \
     > $DIR/dnn/HHEd_dnn_init.log
-}
-
-# __make_addlayer_hed
-__make_addlayer_hed() {
-  local level="$1"
-  local prevLevel=$(( level-1 ))
-  local numOfNodes="$2"
-  local thisLayerWeight="layer${level}_weight"
-  local thisLayerFeature="layer${level}_feamix"
-  local thisLayerBias="layer${level}_bias"
-  local lastLayerFeature="layer${prevLevel}_feamix"
-  local lastLayerNodes="$( \
-    cat $DNN_MODELS_MMF \
-    | grep -B 1 "<FEATURE>" \
-    | grep -A 1 "layer${prevLevel}" \
-    | grep -o " [0-9]*$")"
-  local N_Macro="$(cat $DNN_PROTO | grep '~N')"
-  local activation="SIGMOID"
   
-  # CD ~L "layerout" 0 $numOfNodes
-  cat <<_EOF_
-AM ~M "$thisLayerWeight" <MATRIX> $numOfNodes $lastLayerNodes
-AV ~V "$thisLayerBias" <VECTOR> $numOfNodes
-IL $N_Macro $level ~L "layer${level}" <BEGINLAYER> <LAYERKIND> "PERCEPTRON" \
-  <INPUTFEATURE> ~F "$lastLayerFeature" <WEIGHT> ~M "$thisLayerWeight" \
-  <BIAS> ~V "$thisLayerBias" <ACTIVATION> "$activation" <ENDLAYER>
-AF ~F "$thisLayerFeature" <NUMFEATURES> 1 $numOfNodes <FEATURE> 1 $numOfNodes \
-  <SOURCE> ~L "layer${level}" <CONTEXTSHIFT> 1 0
-CF ~L "layerout" ~F "$thisLayerFeature"
-EL ~L "layer${level}"
-EL ~L "layerout"
-_EOF_
-}
-
-# __read_numlayers
-__read_numlayers() {
-  cat $DNN_MODELS_MMF \
-    | grep "<NUMLAYERS>" \
-    | grep -o "[0-9]*$"
+  # save init models
+  cp $DNN_MODELS_MMF $DNN_INIT_MMF
 }
 
 # add_hidden_layer
@@ -237,7 +241,12 @@ pretrain() {
     -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
   
   # training dnn-hmm models
-  __SGD_training
+  HNTrainSGD -A \
+    -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
+    -H $DNN_MODELS_MMF -M $DIR/dnn \
+    -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
+    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
+    $HMMLIST > $logFile
 }
 
 # context_independent_init
@@ -296,9 +305,8 @@ make_training_criterion_test() {
 #   $1 : DIR
 # ------------------------------------
 
-  setup "$@"
+  setup experiments/monophone.dnn # "$@"
   # state2frame_align
   # holdout_split
   dnn_init
-  pretrain # && fineetune
-  make_training_criterion_test
+  # pretrain
