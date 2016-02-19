@@ -39,9 +39,12 @@ setup() {
   DNN_TRAINING_SCP="$DIR/dnn/training.scp"
   DNN_CVN="$DIR/dnn/cvn"
   DNN_BASIC_CONF="$DIR/dnn/basic.conf"
+  DNN_TRAINING_CRITERION_DATA="$DIR/dnn/TRAINING_CRITERION.data"
+  DNN_HNTrainSGD="$DIR/dnn/HNTrainSGD"
 
   mkdir -p $DIR/dnn
   mkdir -p $DNN_CVN
+  mkdir -p $DNN_HNTrainSGD
   
   # stdout
   echo "$SCRIPT_NAME -> setup()"
@@ -96,32 +99,40 @@ __make_basic_conf() {
 # __SGD_training - Stochastic Gradient Descent training
 __SGD_training() {
   local callerFuncName=$(caller 0 | sed "s/^[0-9]* \([0-9a-zA-Z_]*\) .*/\1/")
+  local T=$(($1+0))
   local isConverged=0
-  local i=0
+  local i=1
+  local logFile=
   
   printf "  SGD training."
   while [ "$isConverged" -eq "0" ]; do
+    logFile="$DNN_HNTrainSGD/${callerFuncName}.${i}.log"
     cp $DNN_MODELS_MMF $__BEFORE_CONVERGED_MMF
+    
     HNTrainSGD -A -D -V -T 1 \
       -c -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
       -H $DNN_MODELS_MMF -M $DIR/dnn \
       -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
       -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
-      $HMMLIST > $DIR/dnn/HNTrainSGD_${callerFuncName}.log
+      $HMMLIST > $logFile
     
-    i=$(( i+1 ))
-    # check for convergence
-    isConverged="$(cat $DIR/dnn/HNTrainSGD_${callerFuncName}.log \
-      | grep "Validation Accuracy" \
-      | grep -o "[0-9]*\.[0-9]*%" \
-      | perl -p -e "s/%\n/ - /;" \
-      | perl -p -e "s/ - $/ > 0\n/" | bc)"
+    if [ "$T" -eq "0" ]; then
+      # check for convergence
+      isConverged="$(grep "Validation Accuracy" "$logFile" \
+        | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
+        | perl -p -e "s/\n/ - /;" \
+        | perl -p -e "s/ - $/ > 0\n/" | bc)"
+    elif [ "$i" -ge "$T" ]; then  break; fi
+
     printf "."
+    i=$(( i+1 ))
   done
-  # use dnn models before training converged
-  mv $__BEFORE_CONVERGED_MMF $DNN_MODELS_MMF
   
-  echo "  : converged at $i iteration(s)."
+  # use dnn models before training converged
+  if [ "$T" -eq "0" ]; then
+    mv $__BEFORE_CONVERGED_MMF $DNN_MODELS_MMF
+  fi
+  echo "  : stoped at $i iteration(s)."
   echo
 }
 
@@ -186,6 +197,18 @@ __read_numlayers() {
     | grep -o "[0-9]*$"
 }
 
+# save_training_criterion
+save_training_criterion() {
+  local logFiles="$1"
+  
+  ls -1d $logFiles | while read file; do
+    grep "Cross Entropy" "$file" \
+      | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
+      | perl -p -e "s/\n/,/;" \
+      | perl -p -e "s/,$/\n/" >> $DNN_TRAINING_CRITERION_DATA
+  done
+}
+
 # add_hidden_layer
 add_hidden_layer() {
   echo "$SCRIPT_NAME -> add_hidden_layer()"
@@ -227,9 +250,9 @@ pretrain() {
     -k "*.%%%" -C configs/hcompv.conf \
     -q v -c $DNN_CVN \
     -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
-
+  
   # training dnn-hmm models
-  __SGD_training
+  __SGD_training 7
 }
 
 # context_independent_init
@@ -275,11 +298,14 @@ finetune() {
 # ------------------------------------
 
   setup experiments/step_by_step # $@
-  state2frame_align
+  # state2frame_align
   # holdout_split
   dnn_init
-  pretrain && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  pretrain
+  save_training_criterion "$DIR/dnn/HNTrainSGD/pretrain.*.log"
+#   fineetune
+#   add_hidden_layer $DNN_HIDDEN_NODES && finetune
+#   add_hidden_layer $DNN_HIDDEN_NODES && finetune
+#   add_hidden_layer $DNN_HIDDEN_NODES && finetune
+#   add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  
