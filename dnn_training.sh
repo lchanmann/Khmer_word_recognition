@@ -197,18 +197,6 @@ __read_numlayers() {
     | grep -o "[0-9]*$"
 }
 
-# save_training_criterion
-save_training_criterion() {
-  local logFiles="$1"
-  
-  ls -1d $logFiles | while read file; do
-    grep "Cross Entropy" "$file" \
-      | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
-      | perl -p -e "s/\n/,/;" \
-      | perl -p -e "s/,$/\n/" >> $DNN_TRAINING_CRITERION_DATA
-  done
-}
-
 # add_hidden_layer
 add_hidden_layer() {
   echo "$SCRIPT_NAME -> add_hidden_layer()"
@@ -253,6 +241,9 @@ pretrain() {
   
   # training dnn-hmm models
   __SGD_training 7
+  
+  # save training criterion
+  bash ./save_training_criterion.sh "$DIR/dnn/HNTrainSGD/pretrain.*.log" $DNN_TRAINING_CRITERION_DATA
 }
 
 # context_independent_init
@@ -301,9 +292,7 @@ finetune() {
   # state2frame_align
   # holdout_split
   dnn_init
-  pretrain
-  save_training_criterion "$DIR/dnn/HNTrainSGD/pretrain.*.log"
-#   fineetune
+  pretrain # && fineetune
 #   add_hidden_layer $DNN_HIDDEN_NODES && finetune
 #   add_hidden_layer $DNN_HIDDEN_NODES && finetune
 #   add_hidden_layer $DNN_HIDDEN_NODES && finetune
