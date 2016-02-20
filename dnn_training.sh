@@ -13,6 +13,7 @@ set -e
 
 # E_VARS
 E_USAGE="Usage: $0 \$directory"
+E_STAGE_REQUIRED="STAGE is required"
 
 # global variables
 SCRIPT_NAME=$0
@@ -99,6 +100,7 @@ IL $N_Macro $level ~L "layer${level}" <BEGINLAYER> <LAYERKIND> "PERCEPTRON" \
 AF ~F "$thisLayerFeature" <NUMFEATURES> 1 $numOfNodes <FEATURE> 1 $numOfNodes \
   <SOURCE> ~L "layer${level}" <CONTEXTSHIFT> 1 0
 CF ~L "layerout" ~F "$thisLayerFeature"
+CD ~L "layerout" 0 $numOfNodes
 EL ~L "layer${level}"
 EL ~L "layerout"
 _EOF_
@@ -113,17 +115,18 @@ __read_numlayers() {
 
 # __SGD_training - Stochastic Gradient Descent training
 __SGD_training() {
-  local callerFuncName=$(caller 0 | sed "s/^[0-9]* \([0-9a-zA-Z_]*\) .*/\1/")
+  if [ -z $STAGE ]; then echo $E_STAGE_REQUIRED >&2; exit 1; fi
+
   local isConverged=0
   local i=0
   local logFile=
-  local logFiles=${DNN_HNTrainSGD}_${callerFuncName}
-  
+  local logFiles=${DNN_HNTrainSGD}_${STAGE}
+
   printf "  SGD training."
   cat /dev/null > "$logFiles"
   while [ "$isConverged" -eq "0" ]; do
     i=$(( i+1 ))
-    logFile="$DNN_HNTrainSGD/${callerFuncName}.${i}.log"
+    logFile="$DNN_HNTrainSGD/${STAGE}.${i}.log"
     cp $DNN_MODELS_MMF $__BEFORE_CONVERGED_MMF
     
     HNTrainSGD -A -D -V -T 1 \
@@ -213,8 +216,11 @@ pretrain() {
     -q v -c $DNN_CVN \
     -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
   
+  # use init.mmf as starting models
+  cp $DNN_INIT_MMF $DNN_MODELS_MMF
+  
   # training dnn-hmm models
-  __SGD_training
+  STAGE="pretrain" __SGD_training
 }
 
 # add_hidden_layer
@@ -240,6 +246,9 @@ add_hidden_layer() {
     -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
     $DIR/dnn/addlayer_${layers}.hed $HMMLIST \
     > $DIR/dnn/HHEd_add_hidden_layer${layers}.log
+  
+  # train the network after adding hidden layer
+  # STAGE="add_hidden_layer_${layers}" __SGD_training
 }
 
 # context_independent_init
@@ -284,8 +293,9 @@ finetune() {
 #   $1 : DIR
 # ------------------------------------
 
-  setup experiments/monophone.dnn # "$@"
-  state2frame_align
+  setup experiments/monophone.dnn "$@"
+  # state2frame_align
   # holdout_split
-  dnn_init
-  pretrain
+  # dnn_init
+  # pretrain # && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES # && finetune
