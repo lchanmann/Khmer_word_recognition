@@ -27,10 +27,12 @@ setup() {
 
 # main
 main() {
-  cat $FILELIST | while read file; do
-    grep "$PATTERN" "$file" \
-      | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/"
-  done
+  while read file; do
+    if [ -a "$file" ]; then
+      grep "$PATTERN" "$file" \
+        | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/"
+    fi
+  done < $FILELIST
 }
 
 # ------------------------------------
