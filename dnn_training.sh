@@ -114,13 +114,15 @@ __read_numlayers() {
 # __SGD_training - Stochastic Gradient Descent training
 __SGD_training() {
   local callerFuncName=$(caller 0 | sed "s/^[0-9]* \([0-9a-zA-Z_]*\) .*/\1/")
-  local T=$(($1+0))
   local isConverged=0
-  local i=1
+  local i=0
   local logFile=
+  local logFiles=${DNN_HNTrainSGD}_${callerFuncName}
   
   printf "  SGD training."
+  cat /dev/null > "$logFiles"
   while [ "$isConverged" -eq "0" ]; do
+    i=$(( i+1 ))
     logFile="$DNN_HNTrainSGD/${callerFuncName}.${i}.log"
     cp $DNN_MODELS_MMF $__BEFORE_CONVERGED_MMF
     
@@ -130,24 +132,20 @@ __SGD_training() {
       -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
       -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
       $HMMLIST > $logFile
+    echo "$logFile" >> $logFiles
     
-    if [ "$T" -eq "0" ]; then
-      # check for convergence
-      isConverged="$(grep "Validation Accuracy" "$logFile" \
-        | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
-        | perl -p -e "s/\n/ - /;" \
-        | perl -p -e "s/ - $/ > 0\n/" | bc)"
-    elif [ "$i" -ge "$T" ]; then  break; fi
+    # check for convergence
+    isConverged="$(grep "Validation Accuracy" "$logFile" \
+      | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
+      | perl -p -e "s/\n/ - /;" \
+      | perl -p -e "s/ - $/ > 0\n/" | bc)"
 
     printf "."
-    i=$(( i+1 ))
   done
-  
   # use dnn models before training converged
-  if [ "$T" -eq "0" ]; then
-    mv $__BEFORE_CONVERGED_MMF $DNN_MODELS_MMF
-  fi
-  echo "  : stoped at $i iteration(s)."
+  mv $__BEFORE_CONVERGED_MMF $DNN_MODELS_MMF
+  
+  echo "  : converged at $i iteration(s)."
   echo
 }
 
@@ -201,6 +199,24 @@ dnn_init() {
   cp $DNN_MODELS_MMF $DNN_INIT_MMF
 }
 
+# pretrain
+pretrain() {
+  echo "$SCRIPT_NAME -> pretrain()"
+  echo
+  
+  # make basic.conf
+  __make_basic_conf > $DNN_BASIC_CONF
+  
+  # compute global variance for unit variance normalization
+  HCompV -A -D -V -T 3 \
+    -k "*.%%%" -C configs/hcompv.conf \
+    -q v -c $DNN_CVN \
+    -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
+  
+  # training dnn-hmm models
+  __SGD_training
+}
+
 # add_hidden_layer
 add_hidden_layer() {
   echo "$SCRIPT_NAME -> add_hidden_layer()"
@@ -224,29 +240,6 @@ add_hidden_layer() {
     -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
     $DIR/dnn/addlayer_${layers}.hed $HMMLIST \
     > $DIR/dnn/HHEd_add_hidden_layer${layers}.log
-}
-
-# pretrain
-pretrain() {
-  echo "$SCRIPT_NAME -> pretrain()"
-  echo
-  
-  # make basic.conf
-  __make_basic_conf > $DNN_BASIC_CONF
-  
-  # compute global variance for unit variance normalization
-  HCompV -A -D -V -T 3 \
-    -k "*.%%%" -C configs/hcompv.conf \
-    -q v -c $DNN_CVN \
-    -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
-  
-  # training dnn-hmm models
-  HNTrainSGD -A \
-    -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
-    -H $DNN_MODELS_MMF -M $DIR/dnn \
-    -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
-    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
-    $HMMLIST > $logFile
 }
 
 # context_independent_init
@@ -285,20 +278,6 @@ finetune() {
   cp $DNN_MODELS_MMF $DIR/models/dnn_${layers}_hmm.mmf
 }
 
-# make_training_criterion_test
-make_training_criterion_test() {
-  echo "$SCRIPT_NAME -> make_training_criterion_test()"
-  echo
-  
-  add_hidden_layer $DNN_HIDDEN_NODES && __SGD_training
-  add_hidden_layer $DNN_HIDDEN_NODES && __SGD_training 200
-  # add_hidden_layer $DNN_HIDDEN_NODES
-  # add_hidden_layer $DNN_HIDDEN_NODES
-  
-  # save training criterion
-  bash ./save_training_criterion.sh "$DIR/dnn/HNTrainSGD/add_hidden_layer.*.log" $DNN_TRAINING_CRITERION_DATA
-}
-
 # ------------------------------------
 # dnn_trainning.sh - train dnn-hmm models
 #
@@ -306,7 +285,7 @@ make_training_criterion_test() {
 # ------------------------------------
 
   setup experiments/monophone.dnn # "$@"
-  # state2frame_align
+  state2frame_align
   # holdout_split
   dnn_init
-  # pretrain
+  pretrain
