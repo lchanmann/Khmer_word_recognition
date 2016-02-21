@@ -285,7 +285,7 @@ finetune() {
     -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
     -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
     $HMMLIST > $logFile
-  echo "$logFile" >> $fileList
+  echo $logFile >> $fileList
   
   # save dnn fine-tuned models
   cp $DNN_MODELS_MMF $DIR/models/dnn_${layers}_hmm.mmf
@@ -297,12 +297,12 @@ finetune() {
 #   $1 : DIR
 # ------------------------------------
 
-  setup experiments/monophone.dnn # "$@"
-  # state2frame_align
+  setup "$@"
+  state2frame_align
   # holdout_split
-  # dnn_init
+  dnn_init
   pretrain && finetune
   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
