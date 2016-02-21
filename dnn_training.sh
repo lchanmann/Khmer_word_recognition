@@ -119,33 +119,35 @@ __SGD_training() {
   local isConverged=0
   local i=0
   local logFile=
-  local logFiles=${DNN_HNTrainSGD}_${STAGE}
+  local fileList="${DNN_HNTrainSGD}_${STAGE}"
 
   printf "  SGD training."
-  cat /dev/null > "$logFiles"
+  cat /dev/null > $fileList
   while [ "$isConverged" -eq "0" ]; do
     i=$(( i+1 ))
-    logFile="$DNN_HNTrainSGD/${STAGE}.${i}.log"
+    logFile="$DNN_HNTrainSGD/${STAGE}_train.${i}.log"
     cp $DNN_MODELS_MMF $__BEFORE_CONVERGED_MMF
     
     HNTrainSGD -A -D -V -T 1 \
-      -c -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
+      -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
       -H $DNN_MODELS_MMF -M $DIR/dnn \
       -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
       -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
       $HMMLIST > $logFile
-    echo "$logFile" >> $logFiles
+    echo $logFile >> $fileList
     
     # check for convergence
-    isConverged="$(grep "Validation Accuracy" "$logFile" \
-      | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
-      | perl -p -e "s/\n/ - /;" \
-      | perl -p -e "s/ - $/ > 0\n/" | bc)"
-
+    if [ "$i" -gt "1" ]; then
+      isConverged="$(tail -n 2 $fileList \
+        | xargs -I {file} grep "Validation Accuracy" {file} \
+        | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
+        | perl -p -e "s/\n/ - /;" \
+        | perl -p -e "s/ - $/ > 0\n/" | bc)"
+    fi
     printf "."
   done
   # use dnn models before training converged
-  mv $__BEFORE_CONVERGED_MMF $DNN_MODELS_MMF
+  mv "$__BEFORE_CONVERGED_MMF" "$DNN_MODELS_MMF"
   
   echo "  : converged at $i iteration(s)."
   echo
@@ -219,7 +221,7 @@ pretrain() {
   cp $DNN_INIT_MMF $DNN_MODELS_MMF
   
   # training dnn-hmm models
-  STAGE="pretrain" __SGD_training
+  STAGE="dnn3" __SGD_training
 }
 
 # add_hidden_layer
@@ -230,11 +232,11 @@ add_hidden_layer() {
   
   local numOfNodes="$1"
   local layers="$(__read_numlayers)"
-  local pretrainModels="$DIR/dnn/dnn${layers}_pretrain.mmf"
+  local pretrainedModels="$DIR/dnn/dnn${layers}_pretrain.mmf"
   
   # add layer to pretrain models but not the already fine-tuned one
-  if [ -a "$pretrainModels" ]; then
-    cp $pretrainModels $DNN_MODELS_MMF
+  if [ -a "$pretrainedModels" ]; then
+    cp $pretrainedModels $DNN_MODELS_MMF
   fi
   
   # make addlayer_?.hed
@@ -247,7 +249,7 @@ add_hidden_layer() {
     > $DIR/dnn/HHEd_add_hidden_layer${layers}.log
   
   # train the network after adding hidden layer
-  STAGE="add_hidden_layer_${layers}" __SGD_training
+  STAGE="dnn${layers}" __SGD_training
 }
 
 # context_independent_init
@@ -270,17 +272,20 @@ finetune() {
   echo
   
   local layers="$(__read_numlayers)"
+  local logFile="${DNN_HNTrainSGD}/dnn${layers}_finetune.log"
+  local fileList="${DNN_HNTrainSGD}_dnn${layers}"
   
   # save dnn pretrain models before fine-tuning
   cp $DNN_MODELS_MMF $DIR/dnn/dnn${layers}_pretrain.mmf
   
   # fine tune dnn models
-  HNTrainSGD -A -D -V \
-    -T 1 -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
+  HNTrainSGD -A -D -V -T 1 \
+    -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
     -H $DNN_MODELS_MMF -M $DIR/dnn \
     -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
     -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
-    $HMMLIST > $DIR/dnn/HNTrainSGD_finetune.log
+    $HMMLIST > $logFile
+  echo "$logFile" >> $fileList
   
   # save dnn fine-tuned models
   cp $DNN_MODELS_MMF $DIR/models/dnn_${layers}_hmm.mmf
@@ -292,12 +297,12 @@ finetune() {
 #   $1 : DIR
 # ------------------------------------
 
-  setup "$@"
+  setup experiments/monophone.dnn # "$@"
   # state2frame_align
   # holdout_split
   # dnn_init
   pretrain && finetune
   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
