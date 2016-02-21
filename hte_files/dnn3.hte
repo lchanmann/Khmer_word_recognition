@@ -6,6 +6,6 @@
 set FEATURETYPE=MFCC_0_D_A_Z
 set FEATUREDIM=39
 set CONTEXTSHIFT=-4,-3,-2,-1,0,1,2,3,4   # input feature context shift
-set DNNSTRUCTURE=351X1024X100	           # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
+set DNNSTRUCTURE=351X800X180	           # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
 set HIDDENACTIVATION=SIGMOID				     # Sigmoid hidden activation function
 set OUTPUTACTIVATION=SOFTMAX				     # Softmax output activation function

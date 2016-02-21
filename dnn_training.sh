@@ -17,7 +17,7 @@ E_STAGE_REQUIRED="STAGE is required"
 
 # global variables
 SCRIPT_NAME=$0
-DNN_HIDDEN_NODES=1024
+DNN_HIDDEN_NODES=800
 
 # show usage
 show_usage() {
@@ -90,7 +90,6 @@ __make_addlayer_hed() {
   local N_Macro="$(cat $DNN_PROTO | grep '~N')"
   local activation="SIGMOID"
   
-  # CD ~L "layerout" 0 $numOfNodes
   cat <<_EOF_
 AM ~M "$thisLayerWeight" <MATRIX> $numOfNodes $lastLayerNodes
 AV ~V "$thisLayerBias" <VECTOR> $numOfNodes
@@ -248,7 +247,7 @@ add_hidden_layer() {
     > $DIR/dnn/HHEd_add_hidden_layer${layers}.log
   
   # train the network after adding hidden layer
-  # STAGE="add_hidden_layer_${layers}" __SGD_training
+  STAGE="add_hidden_layer_${layers}" __SGD_training
 }
 
 # context_independent_init
@@ -293,9 +292,12 @@ finetune() {
 #   $1 : DIR
 # ------------------------------------
 
-  setup experiments/monophone.dnn "$@"
+  setup "$@"
   # state2frame_align
   # holdout_split
   # dnn_init
-  # pretrain # && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES # && finetune
+  pretrain && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
