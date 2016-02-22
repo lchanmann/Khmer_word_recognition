@@ -18,6 +18,7 @@ E_STAGE_REQUIRED="STAGE is required"
 # global variables
 SCRIPT_NAME=$0
 DNN_HIDDEN_NODES=800
+DNN_HIDDEN_ACTIVATION="SIGMOID"
 
 # show usage
 show_usage() {
@@ -43,6 +44,7 @@ setup() {
   DNN_BASIC_CONF="$DIR/dnn/basic.conf"
   DNN_TRAINING_CRITERION_DATA="$DIR/dnn/TRAINING_CRITERION.data"
   DNN_HNTrainSGD="$DIR/dnn/HNTrainSGD"
+  DNN_HTE="$DIR/dnn/HTE"
 
   mkdir -p $DIR/dnn
   mkdir -p $DNN_CVN
@@ -52,6 +54,23 @@ setup() {
   echo "$SCRIPT_NAME -> setup()"
   echo "  DIR: $DIR"
   echo
+}
+
+# __make_hte
+__make_hte() {
+  cat <<_EOF_
+#----------------------------#
+# HTK Environment File       #
+#----------------------------#
+
+# DNN definition variables
+set FEATURETYPE=MFCC_0_D_A_Z
+set FEATUREDIM=39
+set CONTEXTSHIFT=-4,-3,-2,-1,0,1,2,3,4  # Input feature context shift
+set DNNSTRUCTURE=351X${DNN_HIDDEN_NODES}X180  # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
+set HIDDENACTIVATION=${DNN_HIDDEN_ACTIVATION}  # Hidden layer activation function
+set OUTPUTACTIVATION=SOFTMAX  # Softmax output activation function
+_EOF_
 }
 
 # __make_connect_hed
@@ -88,14 +107,13 @@ __make_addlayer_hed() {
     | grep -A 1 "layer${prevLevel}" \
     | grep -o " [0-9]*$")"
   local N_Macro="$(cat $DNN_PROTO | grep '~N')"
-  local activation="SIGMOID"
   
   cat <<_EOF_
 AM ~M "$thisLayerWeight" <MATRIX> $numOfNodes $lastLayerNodes
 AV ~V "$thisLayerBias" <VECTOR> $numOfNodes
 IL $N_Macro $level ~L "layer${level}" <BEGINLAYER> <LAYERKIND> "PERCEPTRON" \
   <INPUTFEATURE> ~F "$lastLayerFeature" <WEIGHT> ~M "$thisLayerWeight" \
-  <BIAS> ~V "$thisLayerBias" <ACTIVATION> "$activation" <ENDLAYER>
+  <BIAS> ~V "$thisLayerBias" <ACTIVATION> "$DNN_HIDDEN_ACTIVATION" <ENDLAYER>
 AF ~F "$thisLayerFeature" <NUMFEATURES> 1 $numOfNodes <FEATURE> 1 $numOfNodes \
   <SOURCE> ~L "layer${level}" <CONTEXTSHIFT> 1 0
 CF ~L "layerout" ~F "$thisLayerFeature"
@@ -186,9 +204,12 @@ dnn_init() {
   echo "  write: $DNN_CONNECT_HED"
   echo
   
+  # make HTE file
+  __make_hte > $DNN_HTE
+  
   # intialize 3 layer dnn prototype model
   python python/GenInitDNN.py --quiet \
-    hte_files/dnn3.hte $DNN_PROTO
+    $DNN_HTE $DNN_PROTO
   
   # make connect.hed and basic.conf
   __make_connect_hed > $DNN_CONNECT_HED
