@@ -32,7 +32,7 @@ port_ubuntu() {
   mkdir "$BACKUP"
   ls *.sh | while read file; do
     mv $file "$BACKUP/$file"
-    sed "s/sort -u/sort -uV/g" "$BACKUP/$file" > $file
+    sed "s/sort -u/sort -Vu/g" "$BACKUP/$file" > $file
     chmod a+x $file
   done
 }
@@ -45,7 +45,7 @@ port_mac() {
   mkdir "$BACKUP"
   ls *.sh | while read file; do
     mv $file "$BACKUP/$file"
-    sed "s/sort -uV/sort -u/g" "$BACKUP/$file" > $file
+    sed "s/sort -Vu/sort -u/g" "$BACKUP/$file" > $file
     chmod a+x $file
   done
 }
