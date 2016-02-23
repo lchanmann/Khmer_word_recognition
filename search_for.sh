@@ -28,7 +28,7 @@ setup() {
 # main
 main() {
   while read file; do
-    if [ -a "$file" ]; then
+    if [ -f "$file" ]; then
       grep "$PATTERN" "$file" \
         | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/"
     fi
