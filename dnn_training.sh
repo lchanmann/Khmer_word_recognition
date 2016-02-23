@@ -75,12 +75,12 @@ _EOF_
 
 # __make_connect_hed
 __make_connect_hed() {
-  local N_Macro="$(cat $DNN_PROTO | grep '~N')"
+  local N_Macro="$(grep '~N' $DNN_PROTO)"
   
   echo "CH $DNN_PROTO models/empty $N_Macro <HYBRID>"
   echo "SW 1 39"
   echo "SK MFCC_0_D_A_Z"
-  cat $DNN_PROTO | grep '~L' | sort -u | sed "s/^/EL /"
+  grep '~L' $DNN_PROTO | sort -u | sed "s/^/EL /"
   echo
 }
 
@@ -102,11 +102,10 @@ __make_addlayer_hed() {
   local thisLayerBias="layer${level}_bias"
   local lastLayerFeature="layer${prevLevel}_feamix"
   local lastLayerNodes="$( \
-    cat $DNN_MODELS_MMF \
-    | grep -B 1 "<FEATURE>" \
+    grep -B 1 "<FEATURE>" $DNN_MODELS_MMF \
     | grep -A 1 "layer${prevLevel}" \
     | grep -o " [0-9]*$")"
-  local N_Macro="$(cat $DNN_PROTO | grep '~N')"
+  local N_Macro="$(grep '~N' $DNN_MODELS_MMF)"
   
   cat <<_EOF_
 AM ~M "$thisLayerWeight" <MATRIX> $numOfNodes $lastLayerNodes
@@ -125,8 +124,7 @@ _EOF_
 
 # __read_numlayers
 __read_numlayers() {
-  cat $DNN_MODELS_MMF \
-    | grep "<NUMLAYERS>" \
+    grep "<NUMLAYERS>" $DNN_MODELS_MMF \
     | grep -o "[0-9]*$"
 }
 
@@ -192,8 +190,8 @@ holdout_split() {
   echo
   
   local vSpkr="$(bash ./random_speaker.sh --trn)"
-  cat $MFCLIST | grep ${vSpkr} > $DNN_HOLDOUT_SCP
-  cat $MFCLIST | grep -v ${vSpkr} > $DNN_TRAINING_SCP
+  grep ${vSpkr} $MFCLIST > $DNN_HOLDOUT_SCP
+  grep -v ${vSpkr} $MFCLIST > $DNN_TRAINING_SCP
 }
 
 # construct dnn hmm model
