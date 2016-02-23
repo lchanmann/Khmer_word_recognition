@@ -30,7 +30,7 @@ main() {
   while read file; do
     if [ -f "$file" ]; then
       grep "$PATTERN" "$file" \
-        | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/"
+        | sed "s/^.* = \([0-9]*[^ %]*\).*/\1/"
     fi
   done < $FILELIST
 }
