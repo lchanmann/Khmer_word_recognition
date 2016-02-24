@@ -1,0 +1,3 @@
+[submodule "matlab"]
+	path = matlab
+	url = git@github.com:lchanmann/dnn_train_stats.git
