@@ -12,12 +12,11 @@
 set -e
 
 # E_VARS
-E_USAGE="Usage: $0 \$directory"
+E_USAGE="Usage: $0 \$directory \$dnnHiddenNodes"
 E_STAGE_REQUIRED="STAGE is required"
 
 # global variables
 SCRIPT_NAME=$0
-DNN_HIDDEN_NODES=800
 DNN_HIDDEN_ACTIVATION="SIGMOID"
 
 # show usage
@@ -27,8 +26,9 @@ show_usage() {
 
 # setup
 setup() {
-  bash ./args_check.sh 1 $@ || (show_usage && exit 1)
+  bash ./args_check.sh 2 $@ || (show_usage && exit 1)
   DIR=$1
+  DNN_HIDDEN_NODES="$2"
   MFCLIST="$DIR/mfclist_trn"
   MODELS_MMF="$DIR/models/models.mmf"
   HMMLIST="$DIR/hmmlist"
@@ -314,6 +314,7 @@ finetune() {
 # dnn_trainning.sh - train dnn-hmm models
 #
 #   $1 : DIR
+#   $2 : DNN_HIDDEN_NODES
 # ------------------------------------
 
   setup "$@"
