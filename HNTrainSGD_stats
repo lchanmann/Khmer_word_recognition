@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Check Number of Args
+if [ "$#" -ne "3" ]; then
+    echo "Usage: $0 dnnDir targetDir suffix";
+    exit 1;
+fi
+
+# Check directory
+if [ ! -d "$1" ]; then
+    echo "Error: invalid dnnDir";
+    exit 1;
+fi
+if [ ! -d "$2" ]; then
+    echo "Error: invalid targetDir";
+    exit 1;
+fi
+
+# Set global variables
+DNN_DIR="$1"
+TARGET_DIR="$2"
+SUFFIX="$3"
+TMP_ACC="/tmp/$$.acc"
+TMP_XENT="/tmp/$$.xent"
+TMP_LR="/tmp/$$.lr"
+TMP_STG="/tmp/$$.stg"
+
+# Read HNTrainSGD_dnn[3-7] in 
+for i in 3 4 5 6 7; do
+    file="$DNN_DIR/HNTrainSGD_dnn$i"
+    
+    echo "Processing $file..."
+    # Aggregate Train and Validation Accuracy
+    bash ./search_for.sh "Accuracy" $file \
+        | paste -s -d ",\n" - > $TMP_ACC
+    
+    # Aggregate Train and Validation Cross Entropy/Frame
+    bash ./search_for.sh "Cross Entropy" $file \
+        | paste -s -d ",\n" - > $TMP_XENT
+    
+    # Aggregate Learning rate
+    bash ./search_for.sh "Learning rate" $file > $TMP_LR
+    
+    # Aggregate training stage
+    T=$(grep -c "" $TMP_ACC)
+    cat /dev/null > $TMP_STG
+    for j in $(seq 1 1 $T); do
+        if [ -f "$DNN_DIR/HNTrainSGD/dnn${i}_train.${j}.log" ]; then
+            echo 1 >> $TMP_STG
+        else
+            echo 2 >> $TMP_STG
+        fi
+    done
+    
+    # Save data file
+    fileout="$TARGET_DIR/dnn${i}_$SUFFIX.data"
+    paste -d ",,,\n" $TMP_ACC $TMP_XENT $TMP_LR $TMP_STG > $fileout
+    echo "Save output to: $fileout"
+done
+ 
