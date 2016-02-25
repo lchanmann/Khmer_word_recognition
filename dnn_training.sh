@@ -77,11 +77,10 @@ _EOF_
 __make_connect_hed() {
   local N_Macro="$(grep '~N' $DNN_PROTO)"
   
-  echo "CH $DNN_PROTO models/empty $N_Macro <HYBRID>"
+  echo "CH $DNN_PROTO /dev/null $N_Macro <HYBRID>"
   echo "SW 1 39"
   echo "SK MFCC_0_D_A_Z"
   grep '~L' $DNN_PROTO | sort -u | sed "s/^/EL /"
-  echo
 }
 
 # __make_basic_conf
