@@ -133,34 +133,40 @@ __SGD_training() {
 
   local isConverged=0
   local i=0
-  local logFile=
+  local j=0
+  local logFile="$DNN_HNTrainSGD/${STAGE}_train"
   local fileList="${DNN_HNTrainSGD}_${STAGE}"
 
   printf "  SGD training."
   cat /dev/null > $fileList
-  while [ "$isConverged" -eq "0" ]; do
+  while true; do
+    j=$i
     i=$(( i+1 ))
-    logFile="$DNN_HNTrainSGD/${STAGE}_train.${i}.log"
-    cp $DNN_MODELS_MMF $__BEFORE_CONVERGED_MMF
     
+    # models backup before traning
+    cp $DNN_MODELS_MMF $__BEFORE_CONVERGED_MMF
     HNTrainSGD -A -D -V -T 1 \
       -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
       -H $DNN_MODELS_MMF -M $DIR/dnn \
       -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
       -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
-      $HMMLIST > $logFile
-    echo $logFile >> $fileList
+      $HMMLIST > $logFile.$i.log
+    printf "."
     
-    # check for convergence
     if [ "$i" -gt "1" ]; then
-      isConverged="$(tail -n 2 $fileList \
-        | xargs -I {file} grep "Validation Accuracy" {file} \
+      isConverged="$(cat $logFile.{$j,$i}.log \
+        | grep "Validation Accuracy" \
         | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
         | perl -p -e "s/\n/ - /;" \
         | perl -p -e "s/ - $/ > 0\n/" | bc)"
+      
+      # check for convergence
+      if [ "$isConverged" -eq "1" ]; then break; fi
     fi
-    printf "."
+
+    echo $logFile.$i.log >> $fileList
   done
+  
   # use dnn models before training converged
   mv "$__BEFORE_CONVERGED_MMF" "$DNN_MODELS_MMF"
   
