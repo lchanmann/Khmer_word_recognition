@@ -79,6 +79,8 @@ show_progress() {
   local dot="...................................................................................................."
   local refreshInterval=2
 
+  # trick current progress counter
+  touch $DIR/results/hvite_0.log
   while true; do
     sleep $refreshInterval
     current="$(cat $DIR/results/hvite_*.log | grep -c "^File:")"
@@ -92,6 +94,7 @@ show_progress() {
     if [ "$progress" -eq "100" ]; then
       break; fi
   done
+  rm $DIR/results/hvite_0.log
 
   echo
   echo "Done!"
