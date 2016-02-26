@@ -190,11 +190,7 @@ __SGD_training() {
 }
 
 # state-to-frame alignment
-__state2frame_align() {
-  echo "$SCRIPT_NAME -> state2frame_align()"
-  echo "  HVite: y"
-  echo
-  
+__state2frame_align() { 
   # viterbi force alignment
   HVite -A -D -V \
     -T 1 -a -l '*' -I labels/words.mlf -i $DNN_TRAIN_ALIGNED_MLF \
@@ -292,8 +288,8 @@ holdout_split() {
 # pretrain
 pretrain() {
   echo "$SCRIPT_NAME -> pretrain()"
-  echo "  - state-to-frame force alignment"
-  echo "  - compute global variance"
+  echo "  State-to-frame force alignment"
+  echo "  Compute global variance"
   echo
   
   # state to frame force alignment
@@ -389,6 +385,36 @@ triphone_dnn_init() {
   __copy_dnn_pretrain_params $(seq 3 1 $layers)
 }
 
+# triphone_dnn_finetune
+triphone_dnn_finetune() {
+  echo "$SCRIPT_NAME -> triphone_dnn_finetune()"
+  echo "  HNTrainSGD: y"
+  echo "  Models: triphone_dnn*_pretrain.mmf"
+  echo
+  
+  # state to frame force alignment
+  __state2frame_align
+  
+  ls -1d $DIR/dnn/triphone_dnn*_pretrain.mmf | while read file; do
+    echo "    finetune: $file"
+    cp $file $DNN_MODELS_MMF
+    
+    local layers="$(__read_numlayers)"
+    local logFile="${DNN_HNTrainSGD}/triphone_dnn${layers}_finetune.log"
+  
+    # fine tune dnn models
+    HNTrainSGD -A -D -V -T 1 \
+      -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
+      -H $DNN_MODELS_MMF -M $DIR/dnn \
+      -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
+      -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
+      $HMMLIST > $logFile
+  
+    # save dnn fine-tuned models
+    cp $DNN_MODELS_MMF $DIR/models/triphone_dnn_${layers}_hmm.mmf
+  done
+}
+
 # ------------------------------------
 # dnn_trainning.sh - train dnn-hmm models
 #
@@ -399,9 +425,10 @@ triphone_dnn_init() {
   setup experiments/monophone.dnn 80 "$@"
   dnn_init
   # # holdout_split
-  pretrain # && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES # && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES # && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES # && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES # && finetune
+  pretrain && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
   triphone_dnn_init
+  triphone_dnn_finetune
