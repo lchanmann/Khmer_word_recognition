@@ -431,13 +431,13 @@ triphone_dnn_finetune() {
 #   $2 : DNN_HIDDEN_NODES
 # ------------------------------------
 
-  setup experiments/monophone.dnn 80 "$@"
+  setup "$@"
   dnn_init
-  # # holdout_split
+  # holdout_split
   pretrain && finetune
   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
   triphone_dnn_init
   triphone_dnn_finetune
