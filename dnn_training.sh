@@ -31,7 +31,11 @@ setup() {
   DNN_HIDDEN_NODES="$2"
   MFCLIST="$DIR/mfclist_trn"
   MODELS_MMF="$DIR/models/models.mmf"
+  MONOPHONE_MMF="$DIR/models/monophone.mmf"
+  TRIPHONE_MMF="$DIR/models/triphone.mmf"
   HMMLIST="$DIR/hmmlist"
+  MONOLIST="$DIR/monolist"
+  TIEDLIST="$DIR/tiedlist"
   DNN_PROTO="$DIR/dnn/proto"
   DNN_INIT_MMF="$DIR/dnn/init.mmf"
   DNN_MODELS_MMF="$DIR/dnn/models.mmf"
@@ -45,6 +49,7 @@ setup() {
   DNN_TRAINING_CRITERION_DATA="$DIR/dnn/TRAINING_CRITERION.data"
   DNN_HNTrainSGD="$DIR/dnn/HNTrainSGD"
   DNN_HTE="$DIR/dnn/HTE"
+  DNN_COPY_HED="$DIR/dnn/copy.hed"
 
   mkdir -p $DIR/dnn
   mkdir -p $DNN_CVN
@@ -67,7 +72,7 @@ __make_hte() {
 set FEATURETYPE=MFCC_0_D_A_Z
 set FEATUREDIM=39
 set CONTEXTSHIFT=-4,-3,-2,-1,0,1,2,3,4  # Input feature context shift
-set DNNSTRUCTURE=351X${DNN_HIDDEN_NODES}X180  # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
+set DNNSTRUCTURE=351X${DNN_HIDDEN_NODES}X1000  # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
 set HIDDENACTIVATION=${DNN_HIDDEN_ACTIVATION}  # Hidden layer activation function
 set OUTPUTACTIVATION=SOFTMAX  # Softmax output activation function
 _EOF_
@@ -136,6 +141,7 @@ __SGD_training() {
   local j=0
   local logFile="$DNN_HNTrainSGD/${STAGE}_train"
   local fileList="${DNN_HNTrainSGD}_${STAGE}"
+  local experimental=
 
   printf "  SGD training."
   cat /dev/null > $fileList
@@ -165,22 +171,31 @@ __SGD_training() {
     fi
 
     echo $logFile.$i.log >> $fileList
+
+    # EXPERIMENTAL: SGD train for 1 epoch only
+    experimental=1
+    break;
   done
   
   # use dnn models before training converged
-  mv "$__BEFORE_CONVERGED_MMF" "$DNN_MODELS_MMF"
+  if [ -z "$experimental" ]; then
+    mv "$__BEFORE_CONVERGED_MMF" "$DNN_MODELS_MMF"
+  fi
   
   echo "  : converged at $i iteration(s)."
   echo
+  
+  # save as pretrain models
+  cp $DNN_MODELS_MMF $DIR/dnn/${STAGE}_pretrain.mmf
 }
 
 # state-to-frame alignment
-state2frame_align() {
+__state2frame_align() {
   echo "$SCRIPT_NAME -> state2frame_align()"
   echo "  HVite: y"
   echo
   
-  # viterbi alignment
+  # viterbi force alignment
   HVite -A -D -V \
     -T 1 -a -l '*' -I labels/words.mlf -i $DNN_TRAIN_ALIGNED_MLF \
     -C configs/hvite.conf -f -o MW -b SIL -y lab \
@@ -189,17 +204,50 @@ state2frame_align() {
     > $DIR/dnn/HVite_state2frame_align.log
 }
 
-# holdout_split
-holdout_split() {
-  echo "$SCRIPT_NAME -> holdout_split()"
-  echo
-  
-  local vSpkr="$(bash ./random_speaker.sh --trn)"
-  grep ${vSpkr} $MFCLIST > $DNN_HOLDOUT_SCP
-  grep -v ${vSpkr} $MFCLIST > $DNN_TRAINING_SCP
+# __make_copy_hed
+__make_copy_hed() {
+  if [ -z $STAGE ]; then echo $E_STAGE_REQUIRED >&2; exit 1; fi
+    
+  while [ -n "$1" ];do    
+    echo "CP <HMMSET> $DIR/dnn/${STAGE}_pretrain.mmf $DIR/monolist \
+             <UPDATEFLAG> abw \
+             <SOURCEMACRO> ~L \"layer$1\" \
+             <TARGETMACRO> ~L \"layer$1\""
+    shift
+  done
 }
 
-# construct dnn hmm model
+# __copy_pretrain_dnn
+__copy_pretrain_dnn() {
+  while [ -n "$1" ]; do
+    local i="$1"
+    local stage=dnn$i
+
+    # make copy.hed
+    STAGE=$stage __make_copy_hed $(seq 2 1 $((i-1))) > $DNN_COPY_HED
+  
+    # copy monophone dnn parameters -> triphone dnn
+    HHEd -A -D -V \
+      -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
+      $DNN_COPY_HED $HMMLIST \
+      > $DIR/dnn/HHEd_copy_hed_copy_pretrain_dnn.log
+    
+    cp $DNN_MODELS_MMF $DIR/dnn/triphone_${stage}_pretrain.mmf
+  
+    # add a hidden layer to models
+    local addLayer_hed="$DIR/dnn/addlayer_$((i+1)).hed"
+    if [ -f "$addLayer_hed" ]; then
+      HHEd -A -D -V \
+        -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
+        $addLayer_hed $HMMLIST \
+        > $DIR/dnn/HHEd_addLayer_hed_copy_pretrain_dnn.log
+    fi
+
+    shift
+  done
+}
+
+# construct dnn hmm monophone models
 dnn_init() {
   echo "$SCRIPT_NAME -> dnn_init()"
   echo "  HHEd: y"
@@ -217,6 +265,10 @@ dnn_init() {
   # make connect.hed and basic.conf
   __make_connect_hed > $DNN_CONNECT_HED
   
+  # init dnn-hmm with monophone models
+  cp $MONOPHONE_MMF $MODELS_MMF
+  cp $MONOLIST $HMMLIST
+  
   # associate DNN and HMM
   HHEd -A -D -V \
     -T 1 -H $MODELS_MMF -M $DIR/dnn \
@@ -227,10 +279,25 @@ dnn_init() {
   cp $DNN_MODELS_MMF $DNN_INIT_MMF
 }
 
+# holdout_split
+holdout_split() {
+  echo "$SCRIPT_NAME -> holdout_split()"
+  echo
+  
+  local vSpkr="$(bash ./random_speaker.sh --trn)"
+  grep ${vSpkr} $MFCLIST > $DNN_HOLDOUT_SCP
+  grep -v ${vSpkr} $MFCLIST > $DNN_TRAINING_SCP
+}
+
 # pretrain
 pretrain() {
   echo "$SCRIPT_NAME -> pretrain()"
+  echo "  - state-to-frame force alignment"
+  echo "  - compute global variance"
   echo
+  
+  # state to frame force alignment
+  __state2frame_align
   
   # make basic.conf
   __make_basic_conf > $DNN_BASIC_CONF
@@ -258,7 +325,7 @@ add_hidden_layer() {
   local layers="$(__read_numlayers)"
   local pretrainedModels="$DIR/dnn/dnn${layers}_pretrain.mmf"
   
-  # add layer to pretrain models but not the already fine-tuned one
+  # add layer to pretrain models but not to the already fine-tuned one
   if [ -a "$pretrainedModels" ]; then
     cp $pretrainedModels $DNN_MODELS_MMF
   fi
@@ -270,23 +337,10 @@ add_hidden_layer() {
   HHEd -A -D -V \
     -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
     $DIR/dnn/addlayer_${layers}.hed $HMMLIST \
-    > $DIR/dnn/HHEd_add_hidden_layer${layers}.log
+    > $DIR/dnn/HHEd_add_hidden_layer.log
   
   # train the network after adding hidden layer
   STAGE="dnn${layers}" __SGD_training
-}
-
-# context_independent_init
-context_independent_init() {
-  echo "$SCRIPT_NAME -> context_independent_init()"
-  echo "  HHEd: y"
-  echo
-  
-  # monophone dnn -> triphone dnn
-  HHEd -A -D -V \
-    -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
-    configs/context_independent_init.hed $HMMLIST \
-    > $DIR/dnn/HHEd_context_independent_init.log
 }
 
 # finetune
@@ -298,9 +352,6 @@ finetune() {
   local layers="$(__read_numlayers)"
   local logFile="${DNN_HNTrainSGD}/dnn${layers}_finetune.log"
   local fileList="${DNN_HNTrainSGD}_dnn${layers}"
-  
-  # save dnn pretrain models before fine-tuning
-  cp $DNN_MODELS_MMF $DIR/dnn/dnn${layers}_pretrain.mmf
   
   # fine tune dnn models
   HNTrainSGD -A -D -V -T 1 \
@@ -315,6 +366,29 @@ finetune() {
   cp $DNN_MODELS_MMF $DIR/models/dnn_${layers}_hmm.mmf
 }
 
+# initialize triphone dnn with context independent (CI) initialization
+triphone_dnn_init() {
+  echo "$SCRIPT_NAME -> context_independent_init()"
+  echo "  HHEd: y"
+  echo "  CI initialization: all monophone dnn pre-trained models"
+  echo
+  
+  local layers="$(__read_numlayers)"
+  
+  # init dnn-hmm with triphone models
+  cp $TRIPHONE_MMF $MODELS_MMF
+  cp $TIEDLIST $HMMLIST
+  
+  # associate DNN3 prototype and triphone HMM
+  HHEd -A -D -V \
+    -T 1 -H $MODELS_MMF -M $DIR/dnn \
+    $DNN_CONNECT_HED $HMMLIST \
+    > $DIR/dnn/HHEd_triphone_dnn_init.log
+  
+  # context independent initialization
+  __copy_pretrain_dnn $(seq 3 1 $layers)
+}
+
 # ------------------------------------
 # dnn_trainning.sh - train dnn-hmm models
 #
@@ -322,12 +396,12 @@ finetune() {
 #   $2 : DNN_HIDDEN_NODES
 # ------------------------------------
 
-  setup "$@"
-  state2frame_align
-  # holdout_split
+  setup experiments/monophone.dnn 80 "$@"
   dnn_init
-  pretrain && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # # holdout_split
+  pretrain # && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES # && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES # && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES # && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES # && finetune
+  triphone_dnn_init
