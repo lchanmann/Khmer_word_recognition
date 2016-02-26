@@ -55,6 +55,9 @@ setup() {
   mkdir -p $DNN_CVN
   mkdir -p $DNN_HNTrainSGD
   
+  # reset decoding models list
+  cat /dev/null > "$DIR/models/MODELS"
+  
   # stdout
   echo "$SCRIPT_NAME -> setup()"
   echo "  DIR: $DIR"
@@ -262,8 +265,8 @@ dnn_init() {
   __make_connect_hed > $DNN_CONNECT_HED
   
   # init dnn-hmm with monophone models
-  cp $MONOPHONE_MMF $MODELS_MMF
-  cp $MONOLIST $HMMLIST
+  ln -sf $PWD/$MONOPHONE_MMF $MODELS_MMF
+  ln -sf $PWD/$MONOLIST $HMMLIST
   
   # associate DNN and HMM
   HHEd -A -D -V \
@@ -359,7 +362,10 @@ finetune() {
   echo $logFile >> $fileList
   
   # save dnn fine-tuned models
-  cp $DNN_MODELS_MMF $DIR/models/dnn_${layers}_hmm.mmf
+  local dnn_hmm_model="$DIR/models/dnn_${layers}_hmm.mmf"
+  
+  cp $DNN_MODELS_MMF $dnn_hmm_model
+  echo "$dnn_hmm_model:$(readlink $HMMLIST)" >> $DIR/models/MODELS
 }
 
 # initialize triphone dnn with context independent (CI) initialization
@@ -372,8 +378,8 @@ triphone_dnn_init() {
   local layers="$(__read_numlayers)"
   
   # init dnn-hmm with triphone models
-  cp $TRIPHONE_MMF $MODELS_MMF
-  cp $TIEDLIST $HMMLIST
+  ln -sf $PWD/$TRIPHONE_MMF $MODELS_MMF
+  ln -sf $PWD/$TIEDLIST $HMMLIST
   
   # associate DNN3 prototype and triphone HMM
   HHEd -A -D -V \
@@ -411,7 +417,10 @@ triphone_dnn_finetune() {
       $HMMLIST > $logFile
   
     # save dnn fine-tuned models
-    cp $DNN_MODELS_MMF $DIR/models/triphone_dnn_${layers}_hmm.mmf
+    local dnn_hmm_model="$DIR/models/triphone_dnn_${layers}_hmm.mmf"
+  
+    cp $DNN_MODELS_MMF $dnn_hmm_model
+    echo "$dnn_hmm_model:$(readlink $HMMLIST)" >> $DIR/models/MODELS
   done
 }
 

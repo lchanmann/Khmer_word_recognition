@@ -43,9 +43,11 @@ setup() {
 viterbi_decode() {
   echo "$SCRIPT_NAME -> viterbi_decode()"
   echo "  \$models: $1"
+  echo "  \$hmmlist: $2"
   echo
 
-  local models=$1
+  local models="$1"
+  local hmmlist="$2"
   local model_name=$(basename $models | sed "s/_hmm.mmf$//")
 
   # viterbi decoding
@@ -53,7 +55,7 @@ viterbi_decode() {
     -T 1 -l '*' -i $DIR/results/output_${model_name}.mlf \
     -C configs/hvite.conf -z zoo -q Atvaldmnr -s 2.4 -p -1.2 \
     -S $MFCLIST -H $models -w lm/word_network.lat \
-    dictionary/dictionary.dct $HMMLIST > $DIR/results/hvite_${model_name}.log
+    dictionary/dictionary.dct $hmmlist > $DIR/results/hvite_${model_name}.log
 
   # generate result statistics
   HResults \
@@ -63,15 +65,21 @@ viterbi_decode() {
 
 # recognize
 recognize() {
-  ls -1d $DIR/models/*hmm.mmf | while read mmf; do
-    viterbi_decode $mmf &
+  local mmf=
+  local hmmlist=
+  
+  cat $DIR/models/MODELS | while read line; do
+    mmf="$(echo $line | sed "s/:.*//")"
+    hmmlist="$(echo $line | sed "s/.*://")"
+    
+    viterbi_decode $mmf $hmmlist &
   done
 }
 
 # show progress
 show_progress() {
-  local M=$(ls $DIR/models | grep -c "hmm.mmf")
-  local testSet=$(cat $DIR/mfclist_tst | grep -c "")
+  local M=$(grep -c "" $DIR/models/MODELS)
+  local testSet=$(grep -c "" $DIR/mfclist_tst)
   local total=$(( M*(testSet) ))
   local current=
   local progress=
