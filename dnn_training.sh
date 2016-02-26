@@ -217,8 +217,8 @@ __make_copy_hed() {
   done
 }
 
-# __copy_pretrain_dnn
-__copy_pretrain_dnn() {
+# copy dnn?_pretrain parameters to triphone_dnn?_pretrain
+__copy_dnn_pretrain_params() {
   while [ -n "$1" ]; do
     local i="$1"
     local stage=dnn$i
@@ -230,7 +230,7 @@ __copy_pretrain_dnn() {
     HHEd -A -D -V \
       -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
       $DNN_COPY_HED $HMMLIST \
-      > $DIR/dnn/HHEd_copy_hed_copy_pretrain_dnn.log
+      > $DIR/dnn/HHEd_copy_hed.log
     
     cp $DNN_MODELS_MMF $DIR/dnn/triphone_${stage}_pretrain.mmf
   
@@ -240,7 +240,7 @@ __copy_pretrain_dnn() {
       HHEd -A -D -V \
         -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
         $addLayer_hed $HMMLIST \
-        > $DIR/dnn/HHEd_addLayer_hed_copy_pretrain_dnn.log
+        > $DIR/dnn/HHEd_addLayer_hed.log
     fi
 
     shift
@@ -386,7 +386,7 @@ triphone_dnn_init() {
     > $DIR/dnn/HHEd_triphone_dnn_init.log
   
   # context independent initialization
-  __copy_pretrain_dnn $(seq 3 1 $layers)
+  __copy_dnn_pretrain_params $(seq 3 1 $layers)
 }
 
 # ------------------------------------
