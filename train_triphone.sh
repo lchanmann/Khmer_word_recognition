@@ -225,7 +225,7 @@ viterbi_align() {
   echo "  HERest: 2x"
   echo "  write: $PHONME_WITH_ALIGNMENT"
   echo
-
+  
   # viterbi alignment
   HVite -A -D -V \
     -T 1 -a -l '*' -I labels/words.mlf -i $PHONEME_WITH_ALIGNMENT_MLF \
@@ -246,8 +246,20 @@ viterbi_align() {
     -C configs/herest.conf -w 1 -t 120.0 60.0 960.0 \
     -S $MFCLIST -I $PHONEME_MLF $HMMLIST \
     > $DIR/models/herest_viterbi_align.log
+}
 
-  cp $MODELS_MMF $DIR/models/gmm_1_hmm.mmf
+# save_gmm_1_models
+save_gmm_1_models() {
+  echo "$SCRIPT_NAME -> save_gmm_1_models()"
+  echo
+  
+  local model="$DIR/models/gmm_1_hmm.mmf"
+  
+  # save gmm model
+  cp $DIR/models/models.mmf $model
+  
+  # add gmm_model to MODELS list
+  echo "$model:$HMMLIST" >> $DIR/models/MODELS
 }
 
 # tune with mixture models
@@ -276,5 +288,6 @@ models_tuning() {
   make_triphone_model
   make_tied_triphone_model
   viterbi_align
+  save_gmm_1_models
   models_tuning
   

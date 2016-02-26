@@ -111,6 +111,9 @@ make_mixtures() {
     # 2x viterbi alignment
     viterbi_align $num
     viterbi_align $num
+    
+    # add gmm models to MODELS list
+    echo "$DIR/models/gmm_${num}_hmm.mmf:$HMMLIST" >> $DIR/models/MODELS
   done
   echo
 }

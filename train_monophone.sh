@@ -30,6 +30,8 @@ setup() {
   bash ./args_check.sh 1 $@ || (show_usage && exit 1)
   MFCLIST=$1
   DIR=$(dirname $1)
+  HMMLIST="$DIR/hmmlist"
+  
 
   # stdout
   echo "$SCRIPT_NAME -> setup()"
@@ -77,9 +79,22 @@ initialize() {
   echo "    - $DIR"
   echo "  output: $DIR/models/models.mmf"
   echo
-
+  
   bash ./init.sh $DIR
-  cp $DIR/models/models.mmf $DIR/models/gmm_1_hmm.mmf
+}
+
+# save_gmm_1_models
+save_gmm_1_models() {
+  echo "$SCRIPT_NAME -> save_gmm_1_models()"
+  echo
+  
+  local model="$DIR/models/gmm_1_hmm.mmf"
+  
+  # save gmm model
+  cp $DIR/models/models.mmf $model
+  
+  # add gmm_model to MODELS list
+  echo "$model:$HMMLIST" >> $DIR/models/MODELS
 }
 
 # tune with mixture models
@@ -104,4 +119,5 @@ models_tuning() {
   make_phoneme_mlf
   make_hmmlist
   initialize
+  save_gmm_1_models
   models_tuning

@@ -40,6 +40,9 @@ setup() {
   MODELS_MMF="$DIR/models/models.mmf"
 
   mkdir -p $DIR/models
+  
+  # reset decoding models list
+  cat /dev/null > "$DIR/models/MODELS"
 
   # stdout
   echo "$SCRIPT_NAME -> setup()"
