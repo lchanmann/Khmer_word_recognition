@@ -75,7 +75,7 @@ __make_hte() {
 set FEATURETYPE=MFCC_0_D_A_Z
 set FEATUREDIM=39
 set CONTEXTSHIFT=-4,-3,-2,-1,0,1,2,3,4  # Input feature context shift
-set DNNSTRUCTURE=351X${DNN_HIDDEN_NODES}X1000  # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
+set DNNSTRUCTURE=351X${DNN_HIDDEN_NODES}X180  # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
 set HIDDENACTIVATION=${DNN_HIDDEN_ACTIVATION}  # Hidden layer activation function
 set OUTPUTACTIVATION=SOFTMAX  # Softmax output activation function
 _EOF_
@@ -265,8 +265,8 @@ dnn_init() {
   __make_connect_hed > $DNN_CONNECT_HED
   
   # init dnn-hmm with monophone models
-  ln -sf $PWD/$MONOPHONE_MMF $MODELS_MMF
-  ln -sf $PWD/$MONOLIST $HMMLIST
+  ln -sf "$PWD/$MONOPHONE_MMF" $MODELS_MMF
+  ln -sf "$PWD/$MONOLIST" $HMMLIST
   
   # associate DNN and HMM
   HHEd -A -D -V \
@@ -366,6 +366,9 @@ finetune() {
   
   cp $DNN_MODELS_MMF $dnn_hmm_model
   echo "$dnn_hmm_model:$(readlink $HMMLIST)" >> $DIR/models/MODELS
+  
+  # remove intermediate finetuning models
+  rm -rf $DIR/dnn/epoch*
 }
 
 # initialize triphone dnn with context independent (CI) initialization
@@ -378,8 +381,8 @@ triphone_dnn_init() {
   local layers="$(__read_numlayers)"
   
   # init dnn-hmm with triphone models
-  ln -sf $PWD/$TRIPHONE_MMF $MODELS_MMF
-  ln -sf $PWD/$TIEDLIST $HMMLIST
+  ln -sf "$PWD/$TRIPHONE_MMF" $MODELS_MMF
+  ln -sf "$PWD/$TIEDLIST" $HMMLIST
   
   # associate DNN3 prototype and triphone HMM
   HHEd -A -D -V \
@@ -421,6 +424,9 @@ triphone_dnn_finetune() {
   
     cp $DNN_MODELS_MMF $dnn_hmm_model
     echo "$dnn_hmm_model:$(readlink $HMMLIST)" >> $DIR/models/MODELS
+    
+    # remove intermediate finetuning models
+    rm -rf $DIR/dnn/epoch*
   done
 }
 
