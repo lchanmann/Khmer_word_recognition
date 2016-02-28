@@ -18,6 +18,8 @@ E_STAGE_REQUIRED="STAGE is required"
 # global variables
 SCRIPT_NAME=$0
 DNN_HIDDEN_ACTIVATION="SIGMOID"
+# EXPERIMENTAL: SGD pre-train for 2 epoch only
+PRETRAIN_ITERATION=2
 
 # show usage
 show_usage() {
@@ -144,7 +146,6 @@ __SGD_training() {
   local j=0
   local logFile="$DNN_HNTrainSGD/${STAGE}_train"
   local fileList="${DNN_HNTrainSGD}_${STAGE}"
-  local experimental=
 
   printf "  SGD training."
   cat /dev/null > $fileList
@@ -162,34 +163,42 @@ __SGD_training() {
       $HMMLIST > $logFile.$i.log
     printf "."
     
+    # check for max iteration
+    if [ -n "$PRETRAIN_ITERATION" ]; then
+      if [ "$i" -ge "$PRETRAIN_ITERATION" ]; then
+        # add last iteration of log file to list
+        echo $logFile.$i.log >> $fileList
+        break;
+      fi
+    fi
+    
+    # check for convergence
     if [ "$i" -gt "1" ]; then
       isConverged="$(cat $logFile.{$j,$i}.log \
         | grep "Validation Accuracy" \
         | sed "s/^.* = \([0-9]*\.[0-9]*\).*/\1/" \
         | perl -p -e "s/\n/ - /;" \
         | perl -p -e "s/ - $/ > 0\n/" | bc)"
-      
-      # check for convergence
-      if [ "$isConverged" -eq "1" ]; then break; fi
+    
+      if [ "$isConverged" -eq "1" ]; then
+        # use dnn models before training converged
+        mv "$__BEFORE_CONVERGED_MMF" "$DNN_MODELS_MMF"
+        break;
+      fi
     fi
 
     echo $logFile.$i.log >> $fileList
-
-    # EXPERIMENTAL: SGD train for 1 epoch only
-    experimental=1
-    break;
   done
   
-  # use dnn models before training converged
-  if [ -z "$experimental" ]; then
-    mv "$__BEFORE_CONVERGED_MMF" "$DNN_MODELS_MMF"
-  fi
-  
-  echo "  : converged at $i iteration(s)."
+  echo "  : stopped at $i iteration(s)."
   echo
   
   # save as pretrain models
-  cp $DNN_MODELS_MMF $DIR/dnn/${STAGE}_pretrain.mmf
+  local pretrained_models="$DIR/dnn/${STAGE}_pretrain.mmf"
+  cp $DNN_MODELS_MMF $pretrained_models
+  
+  # add pretrain models for evaluation
+  echo "$pretrained_models:$(readlink $HMMLIST)" >> "$DIR/models/MODELS"
 }
 
 # state-to-frame alignment
@@ -361,14 +370,14 @@ finetune() {
     $HMMLIST > $logFile
   echo $logFile >> $fileList
   
+  # remove intermediate epoch
+  rm -rf $DIR/dnn/epoch*
+  
   # save dnn fine-tuned models
   local dnn_hmm_model="$DIR/models/dnn_${layers}_hmm.mmf"
   
   cp $DNN_MODELS_MMF $dnn_hmm_model
   echo "$dnn_hmm_model:$(readlink $HMMLIST)" >> $DIR/models/MODELS
-  
-  # remove intermediate finetuning models
-  rm -rf $DIR/dnn/epoch*
 }
 
 # initialize triphone dnn with context independent (CI) initialization
@@ -418,15 +427,15 @@ triphone_dnn_finetune() {
       -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
       -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
       $HMMLIST > $logFile
-  
+
+    # remove intermediate epoch
+    rm -rf $DIR/dnn/epoch*
+    
     # save dnn fine-tuned models
     local dnn_hmm_model="$DIR/models/triphone_dnn_${layers}_hmm.mmf"
   
     cp $DNN_MODELS_MMF $dnn_hmm_model
     echo "$dnn_hmm_model:$(readlink $HMMLIST)" >> $DIR/models/MODELS
-    
-    # remove intermediate finetuning models
-    rm -rf $DIR/dnn/epoch*
   done
 }
 
@@ -437,13 +446,15 @@ triphone_dnn_finetune() {
 #   $2 : DNN_HIDDEN_NODES
 # ------------------------------------
 
-  setup "$@"
+  setup experiments/today.dnn 80 "$@"
   dnn_init
   # holdout_split
   pretrain && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  triphone_dnn_init
-  triphone_dnn_finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # triphone_dnn_init
+  # triphone_dnn_finetune
+
+  bash ./decode.sh $DIR

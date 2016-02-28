@@ -16,9 +16,6 @@ E_USAGE="Usage: $0 \$directory"
 
 # global variables
 SCRIPT_NAME=$0
-DIR=
-HMMLIST=
-MFCLIST=
 
 # show usage
 show_usage() {
@@ -48,14 +45,16 @@ viterbi_decode() {
 
   local models="$1"
   local hmmlist="$2"
-  local model_name=$(basename $models | sed "s/_hmm.mmf$//")
+  local model_name=$(basename $models | sed "s/.mmf$//")
+  local hvite_log="$DIR/results/hvite_${model_name}.$$"
 
   # viterbi decoding
+  touch $hvite_log
   HVite -A -D -V \
     -T 1 -l '*' -i $DIR/results/output_${model_name}.mlf \
-    -C configs/hvite.conf -z zoo -q Atvaldmnr -s 2.4 -p -1.2 \
+    -C configs/hvite.conf -q Atvaldmnr -s 2.4 -p -1.2 \
     -S $MFCLIST -H $models -w lm/word_network.lat \
-    dictionary/dictionary.dct $hmmlist > $DIR/results/hvite_${model_name}.log
+    dictionary/dictionary.dct "$hmmlist" > $hvite_log
 
   # generate result statistics
   HResults \
@@ -72,7 +71,7 @@ recognize() {
     mmf="$(echo $line | sed "s/:.*//")"
     hmmlist="$(echo $line | sed "s/.*://")"
     
-    viterbi_decode $mmf $hmmlist &
+    viterbi_decode "$mmf" "$hmmlist" &
   done
 }
 
@@ -80,18 +79,16 @@ recognize() {
 show_progress() {
   local M=$(grep -c "" $DIR/models/MODELS)
   local testSet=$(grep -c "" $DIR/mfclist_tst)
-  local total=$(( M*(testSet) ))
+  local total=$(( M*testSet ))
   local current=
   local progress=
   local progressBar=
   local dot="...................................................................................................."
   local refreshInterval=2
 
-  # trick current progress counter
-  touch $DIR/results/hvite_0.log
   while true; do
     sleep $refreshInterval
-    current="$(cat $DIR/results/hvite_*.log | grep -c "^File:")"
+    current="$(cat $DIR/results/hvite_*.$$ | grep -c "^File:")"
     progress=$((current*100/total))
 
     progressBar="$dot ($progress%%)"
@@ -102,7 +99,11 @@ show_progress() {
     if [ "$progress" -eq "100" ]; then
       break; fi
   done
-  rm $DIR/results/hvite_0.log
+  
+  # rename hvite log
+  ls -1 $DIR/results/hvite_*.$$ | while read file; do
+    mv $file $(echo $file | sed "s/\.$$/.log/")
+  done
 
   echo
   echo "Done!"
