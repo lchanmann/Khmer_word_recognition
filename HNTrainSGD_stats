@@ -24,38 +24,59 @@ TMP_ACC="/tmp/$$.acc"
 TMP_XENT="/tmp/$$.xent"
 TMP_LR="/tmp/$$.lr"
 TMP_STG="/tmp/$$.stg"
+TMP_TRIPHONE="/tmp/$$.triphone"
+PREFIX=
+
+# export_data
+export_data() {
+  file="$1"
+  PREFIX="$2"
+  
+  echo "Processing $file..."
+  # Aggregate Train and Validation Accuracy
+  bash ./search_for.sh "Accuracy" $file \
+      | paste -s -d ",\n" - > $TMP_ACC
+
+  # Aggregate Train and Validation Cross Entropy/Frame
+  bash ./search_for.sh "Cross Entropy" $file \
+      | paste -s -d ",\n" - > $TMP_XENT
+
+  # Aggregate Learning rate
+  bash ./search_for.sh "Learning rate" $file > $TMP_LR
+
+  # Aggregate training stage
+  T=$(grep -c "" $TMP_ACC)
+  cat /dev/null > $TMP_STG
+  for j in $(seq 1 1 $T); do
+      if [ -f "$DNN_DIR/HNTrainSGD/dnn${i}_train.${j}.log" ]; then
+          echo 1 >> $TMP_STG
+      else
+          echo 2 >> $TMP_STG
+      fi
+  done
+
+  # Save data fileout
+  fileout="$TARGET_DIR/${PREFIX}dnn${i}_$SUFFIX.data"
+  paste -d ",,,\n" $TMP_ACC $TMP_XENT $TMP_LR $TMP_STG > $fileout
+
+  echo "Save output to: $fileout"
+  echo
+}
 
 # Read HNTrainSGD_dnn[3-7] in 
 for i in 3 4 5 6 7; do
     file="$DNN_DIR/HNTrainSGD_dnn$i"
     
-    echo "Processing $file..."
-    # Aggregate Train and Validation Accuracy
-    bash ./search_for.sh "Accuracy" $file \
-        | paste -s -d ",\n" - > $TMP_ACC
-    
-    # Aggregate Train and Validation Cross Entropy/Frame
-    bash ./search_for.sh "Cross Entropy" $file \
-        | paste -s -d ",\n" - > $TMP_XENT
-    
-    # Aggregate Learning rate
-    bash ./search_for.sh "Learning rate" $file > $TMP_LR
-    
-    # Aggregate training stage
-    T=$(grep -c "" $TMP_ACC)
-    cat /dev/null > $TMP_STG
-    for j in $(seq 1 1 $T); do
-        if [ -f "$DNN_DIR/HNTrainSGD/dnn${i}_train.${j}.log" ]; then
-            echo 1 >> $TMP_STG
-        else
-            echo 2 >> $TMP_STG
-        fi
-    done
-    
-    # Save data fileout
-    fileout="$TARGET_DIR/dnn${i}_$SUFFIX.data"
-    paste -d ",,,\n" $TMP_ACC $TMP_XENT $TMP_LR $TMP_STG > $fileout
-    
-    echo "Save output to: $fileout"
-    echo
+    if [ -f "$file" ]; then
+      export_data "$file"
+      
+      # look for triphone finetune log
+      triphoneLog="$DNN_DIR/HNTrainSGD/triphone_dnn${i}_finetune.log"
+      if [ -f "$triphoneLog" ]; then
+        sed '$d' $file > $TMP_TRIPHONE
+        echo $triphoneLog >> $TMP_TRIPHONE
+        
+        export_data "$TMP_TRIPHONE" "triphone_"
+      fi
+    fi
 done
