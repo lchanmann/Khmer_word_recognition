@@ -16,6 +16,7 @@ E_USAGE="Usage: $0 \$directory"
 
 # global variables
 SCRIPT_NAME=$0
+PID="$$"
 
 # show usage
 show_usage() {
@@ -46,10 +47,9 @@ viterbi_decode() {
   local models="$1"
   local hmmlist="$2"
   local model_name=$(basename $models | sed "s/.mmf$//")
-  local hvite_log="$DIR/results/hvite_${model_name}.$$"
+  local hvite_log="$DIR/results/hvite_${model_name}.$PID"
 
   # viterbi decoding
-  touch $hvite_log
   HVite -A -D -V \
     -T 1 -l '*' -i $DIR/results/output_${model_name}.mlf \
     -C configs/hvite.conf -q Atvaldmnr -s 2.4 -p -1.2 \
@@ -67,12 +67,15 @@ recognize() {
   local mmf=
   local hmmlist=
   
-  cat $DIR/models/MODELS | while read line; do
+  while read line; do
     mmf="$(echo $line | sed "s/:.*//")"
     hmmlist="$(echo $line | sed "s/.*://")"
     
-    viterbi_decode "$mmf" "$hmmlist" &
-  done
+    viterbi_decode "$mmf" "$hmmlist" & 
+  done < $DIR/models/MODELS
+  
+  # small delay to let HVite processes kickoff
+  sleep 2
 }
 
 # show progress
@@ -85,10 +88,9 @@ show_progress() {
   local progressBar=
   local dot="...................................................................................................."
   local refreshInterval=2
-
+  
   while true; do
-    sleep $refreshInterval
-    current="$(cat $DIR/results/hvite_*.$$ | grep -c "^File:")"
+    current="$(cat $DIR/results/hvite_*.$PID | grep -c "^File:")"
     progress=$((current*100/total))
 
     progressBar="$dot ($progress%%)"
@@ -98,12 +100,12 @@ show_progress() {
 
     if [ "$progress" -eq "100" ]; then
       break; fi
+    
+    sleep $refreshInterval
   done
   
   # rename hvite log
-  ls -1 $DIR/results/hvite_*.$$ | while read file; do
-    mv $file $(echo $file | sed "s/\.$$/.log/")
-  done
+  rename "s/$PID$/log/" $DIR/results/hvite_*.$PID
 
   echo
   echo "Done!"
