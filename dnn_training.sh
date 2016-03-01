@@ -52,6 +52,7 @@ setup() {
   DNN_HTE="$DIR/dnn/HTE"
   DNN_COPY_HED="$DIR/dnn/copy.hed"
   DNN_EB_="$DIR/dnn/EB_"
+  DNN_PRETRAIN="$DIR/dnn/PRETRAIN"
   DNN_TRIPHONE_PRETRAIN="$DIR/dnn/TRIPHONE_PRETRAIN"
 
   mkdir -p $DIR/dnn
@@ -147,6 +148,7 @@ __SGD_training() {
   local j=0
   local logFile="$DNN_HNTrainSGD/${STAGE}_train"
   local fileList="${DNN_HNTrainSGD}_${STAGE}"
+  local pretrainedModels="$DIR/dnn/${STAGE}_pretrain.mmf"
   
   printf "  SGD training."
   cat /dev/null > $fileList
@@ -195,8 +197,10 @@ __SGD_training() {
   echo
   
   # save as pretrain models
-  local pretrainedModels="$DIR/dnn/${STAGE}_pretrain.mmf"
   cp $DNN_MODELS_MMF $pretrainedModels
+  
+  # add to PRETRAIN
+  echo $pretrainedModels >> $DNN_PRETRAIN
   
   # add pretrain models for evaluation
   echo "$pretrainedModels:$(readlink $HMMLIST)" >> "$DIR/models/MODELS"
@@ -215,48 +219,35 @@ __state2frame_align() {
 
 # __make_copy_hed
 __make_copy_hed() {
-  if [ -z $STAGE ]; then echo $E_STAGE_REQUIRED >&2; exit 1; fi
-    
-  while [ -n "$1" ];do    
-    echo "CP <HMMSET> $DIR/dnn/${STAGE}_pretrain.mmf $DIR/monolist \
+  local swapModels="$1"
+  local numLayers="$2"
+  
+  for i in $(seq 2 1 $(( numLayers-1 ))); do
+    echo "CP <HMMSET> $swapModels $DIR/monolist \
              <UPDATEFLAG> abw \
-             <SOURCEMACRO> ~L \"layer$1\" \
-             <TARGETMACRO> ~L \"layer$1\""
-    shift
+             <SOURCEMACRO> ~L \"layer$i\" \
+             <TARGETMACRO> ~L \"layer$i\""
   done
 }
 
-# copy dnn?_pretrain parameters to triphone_dnn?_pretrain
+# __copy_dnn_pretrain_params
 __copy_dnn_pretrain_params() {
-  while [ -n "$1" ]; do
-    local i="$1"
-    local stage=dnn$i
-    local pretrainedTriphoneModels="$DIR/dnn/triphone_${stage}_pretrain.mmf"
-
-    # make copy.hed
-    STAGE=$stage __make_copy_hed $(seq 2 1 $((i-1))) > $DNN_COPY_HED
+  local pretrainedModels="$1"
+  local numLayers="$2"
+  local newModels=$(basename $pretrainedModels | sed "s/^/triphone_/")
   
-    # copy monophone dnn parameters -> triphone dnn
-    HHEd -A -D -V \
-      -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
-      $DNN_COPY_HED $HMMLIST \
-      > $DIR/dnn/HHEd_copy_hed.log
-    cp $DNN_MODELS_MMF $pretrainedTriphoneModels
-    
-    # add to TRIPHONE_PRETRAIN
-    echo $pretrainedTriphoneModels >> $DNN_TRIPHONE_PRETRAIN
+  # make copy.hed
+  __make_copy_hed "$pretrainedModels" $numLayers > $DNN_COPY_HED
   
-    # add a hidden layer to models
-    local addLayer_hed="$DIR/dnn/addlayer_$((i+1)).hed"
-    if [ -f "$addLayer_hed" ]; then
-      HHEd -A -D -V \
-        -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
-        $addLayer_hed $HMMLIST \
-        > $DIR/dnn/HHEd_addLayer_hed.log
-    fi
-
-    shift
-  done
+  # copy monophone dnn parameters -> triphone dnn
+  HHEd -A -D -V \
+    -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
+    $DNN_COPY_HED $HMMLIST \
+    > $DIR/dnn/HHEd_copy_hed.log
+  cp $DNN_MODELS_MMF "$DIR/dnn/$newModels"
+  
+  # add to TRIPHONE_PRETRAIN
+  echo $DIR/dnn/$newModels >> $DNN_TRIPHONE_PRETRAIN
 }
 
 # construct dnn hmm monophone models
@@ -323,6 +314,9 @@ pretrain() {
   # use init.mmf as starting models
   cp $DNN_INIT_MMF $DNN_MODELS_MMF
   
+  # reset DNN_PRETRAIN
+  cat /dev/null > $DNN_PRETRAIN
+  
   # training dnn-hmm models
   STAGE="dnn3" __SGD_training
 }
@@ -361,8 +355,14 @@ finetune() {
   echo "  HNTrainSGD: y"
   echo
   
+  local numLayers="$(__read_numlayers)"
+  local models="$DIR/models/dnn_${numLayers}_hmm.mmf"
+  
+  # clone $DNN_MODELS_MMF for finetuning
+  cp $DNN_MODELS_MMF "$models"
+  
   # run finetune in background
-  __finetune_run & 
+  __finetune_run $numLayers "$models" & 
 }
 
 # __finetune_run
@@ -370,14 +370,13 @@ __finetune_run() {
   local prefix_=
   if [ -n "$TRIPHONE" ]; then prefix_="triphone_"; fi
   
-  local layers="$(__read_numlayers)"
+  local layers="$1"
+  local models="$2"
   local logFile="${DNN_HNTrainSGD}/${prefix_}dnn${layers}_finetune.log"
-  local models="$DIR/models/${prefix_}dnn_${layers}_hmm.mmf"
   local ebDir="${DNN_EB_}${prefix_}dnn${layers}"
   local hmmlist="$(readlink $HMMLIST)"
   
-  # finetune dnn models
-  cp $DNN_MODELS_MMF $models
+  # make epoch base dir
   mkdir -p $ebDir
   
   HNTrainSGD -A -D -V -T 1 \
@@ -405,9 +404,7 @@ triphone_dnn_init() {
   echo "  HHEd: y"
   echo "  CI initialization: all monophone dnn pre-trained models"
   echo
-  
-  local layers="$(__read_numlayers)"
-  
+    
   # init dnn-hmm with triphone models
   ln -sf "$PWD/$TRIPHONE_MMF" $MODELS_MMF
   ln -sf "$PWD/$TIEDLIST" $HMMLIST
@@ -421,8 +418,21 @@ triphone_dnn_init() {
     $DNN_CONNECT_HED $HMMLIST \
     > $DIR/dnn/HHEd_triphone_dnn_init.log
   
+  local layers=3
   # context independent initialization
-  __copy_dnn_pretrain_params $(seq 3 1 $layers)
+  while read file; do
+    # add a hidden layer to models
+    local addLayer_hed="$DIR/dnn/addlayer_$layers.hed"
+    if [ -f "$addLayer_hed" ]; then
+      HHEd -A -D -V \
+        -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
+        $addLayer_hed $HMMLIST \
+        > $DIR/dnn/HHEd_addLayer_hed.log
+    fi
+    
+    __copy_dnn_pretrain_params "$file" $layers
+    layers=$(( layers+1 ))
+  done < $DNN_PRETRAIN
 }
 
 # triphone_dnn_finetune
@@ -432,17 +442,24 @@ triphone_dnn_finetune() {
   echo "  Models: triphone_dnn*_pretrain.mmf"
   echo
   
+  # numLayers increment immediately in while loop to start with dnn3
+  local numLayers=2
+  local models=
+  
   # state to frame force alignment
   __state2frame_align
   
   while read file; do
     if [ -f "$file" ]; then
       echo "    finetune: $file"
-      cp $file $DNN_MODELS_MMF
       
-      TRIPHONE=yes __finetune_run & 
-      # HACK: delay next loop cp command to overwrite the $DNN_MODELS_MMF too quickly
-      sleep 5
+      numLayers=$(( numLayers+1 ))
+      models="$DIR/models/triphone_dnn_${numLayers}_hmm.mmf"
+      
+      # clone $file for finetuning
+      cp $file "$models"
+      
+      TRIPHONE=yes __finetune_run $numLayers "$models" & 
     fi
   done < $DNN_TRIPHONE_PRETRAIN
   echo
@@ -469,9 +486,9 @@ wait_HNTrainSGD() {
   # holdout_split
   pretrain && finetune
   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
   
   # let monophone models finish tuning since triphone model will overwrite $DNN_TRAIN_ALIGNED_MLF
   wait_HNTrainSGD
