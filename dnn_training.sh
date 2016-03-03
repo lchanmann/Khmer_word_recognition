@@ -11,6 +11,9 @@
 # exit on error
 set -e
 
+# include
+source ./process_queue.sh
+
 # E_VARS
 E_USAGE="Usage: $0 \$directory \$dnnHiddenNodes"
 E_STAGE_REQUIRED="STAGE is required"
@@ -59,6 +62,9 @@ setup() {
   mkdir -p $DNN_CVN
   mkdir -p $DNN_HNTrainSGD
   
+  # setup queue database
+  set_queue_DB $DNN_HNTrainSGD.queue
+  
   # reset decoding models list
   cat /dev/null > "$DIR/models/MODELS"
   
@@ -78,7 +84,7 @@ __make_hte() {
 # DNN definition variables
 set FEATURETYPE=MFCC_0_D_A_Z
 set FEATUREDIM=39
-set CONTEXTSHIFT=-4,-3,-2,-1,0,1,2,3,4  # Input feature context shift
+set CONTEXTSHIFT=-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6  # Input feature context shift
 set DNNSTRUCTURE=351X${DNN_HIDDEN_NODES}X180  # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
 set HIDDENACTIVATION=${DNN_HIDDEN_ACTIVATION}  # Hidden layer activation function
 set OUTPUTACTIVATION=SOFTMAX  # Softmax output activation function
@@ -362,7 +368,7 @@ finetune() {
   cp $DNN_MODELS_MMF "$models"
   
   # run finetune in background
-  __finetune_run $numLayers "$models" & 
+  run_in_queue __finetune_run $numLayers "$models"
 }
 
 # __finetune_run
@@ -459,7 +465,7 @@ triphone_dnn_finetune() {
       # clone $file for finetuning
       cp $file "$models"
       
-      TRIPHONE=yes __finetune_run $numLayers "$models" & 
+      run_in_queue TRIPHONE=yes __finetune_run $numLayers "$models"
     fi
   done < $DNN_TRIPHONE_PRETRAIN
   echo
@@ -481,18 +487,19 @@ wait_HNTrainSGD() {
 #   $2 : DNN_HIDDEN_NODES
 # ------------------------------------
 
-  setup experiments/today.dnn 80 "$@"
+  setup experiments/today.dnn 800 "$@"
   dnn_init
   # holdout_split
   pretrain && finetune
   add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
-  # add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
   
   # let monophone models finish tuning since triphone model will overwrite $DNN_TRAIN_ALIGNED_MLF
   wait_HNTrainSGD
-  
+
   # triphone DNN-HMM
   triphone_dnn_init
   triphone_dnn_finetune
