@@ -329,13 +329,14 @@ pretrain() {
 
 # add_hidden_layer
 add_hidden_layer() {
-  echo "$SCRIPT_NAME -> add_hidden_layer()"
-  echo "  # hidden nodes: $1"
-  echo
-  
   local numOfNodes="$1"
   local layers="$(__read_numlayers)"
   local pretrainedModels="$DIR/dnn/dnn${layers}_pretrain.mmf"
+  
+  echo "$SCRIPT_NAME -> add_hidden_layer()"
+  echo "  # hidden nodes: $1"
+  echo "  # layers: $(( layers+1 ))"
+  echo
   
   # add layer to pretrain models but not to the already fine-tuned one
   if [ -a "$pretrainedModels" ]; then
