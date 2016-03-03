@@ -75,7 +75,7 @@ recognize() {
   done < $DIR/models/MODELS
   
   # small delay to let HVite processes kickoff
-  sleep 2
+  sleep 5
 }
 
 # show progress
@@ -88,7 +88,7 @@ show_progress() {
   local progressBar=
   local dot="...................................................................................................."
   local refreshInterval=2
-  
+    
   while true; do
     current="$(cat $DIR/results/hvite_*.$PID | grep -c "^File:")"
     progress=$((current*100/total))
