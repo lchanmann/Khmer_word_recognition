@@ -212,6 +212,39 @@ __SGD_training() {
   echo "$pretrainedModels:$(readlink $HMMLIST)" >> "$DIR/models/MODELS"
 }
 
+# __SGD_finetune
+__SGD_finetune() {
+  local prefix_=
+  if [ -n "$TRIPHONE" ]; then prefix_="triphone_"; fi
+  
+  local layers="$1"
+  local models="$2"
+  local logFile="${DNN_HNTrainSGD}/${prefix_}dnn${layers}_finetune.log"
+  local ebDir="${DNN_EB_}${prefix_}dnn${layers}"
+  local hmmlist="$(readlink $HMMLIST)"
+  
+  # make epoch base dir
+  mkdir -p $ebDir
+  
+  HNTrainSGD -A -D -V -T 1 \
+    -eb $ebDir \
+    -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
+    -H $models -M $DIR/models \
+    -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
+    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
+    "$hmmlist" > $logFile
+
+  if [ -z $TRIPHONE ]; then
+    echo $logFile >> "${DNN_HNTrainSGD}_dnn${layers}"
+  fi
+
+  # remove intermediate epoch
+  rm -rf "$ebDir"
+
+  # add dnn fine-tuned models to MODELS list
+  echo "$models:$hmmlist" >> $DIR/models/MODELS
+}
+
 # state-to-frame alignment
 __state2frame_align() { 
   # viterbi force alignment
@@ -369,40 +402,7 @@ finetune() {
   cp $DNN_MODELS_MMF "$models"
   
   # run finetune in background
-  run_in_queue __finetune_run $numLayers "$models"
-}
-
-# __finetune_run
-__finetune_run() {
-  local prefix_=
-  if [ -n "$TRIPHONE" ]; then prefix_="triphone_"; fi
-  
-  local layers="$1"
-  local models="$2"
-  local logFile="${DNN_HNTrainSGD}/${prefix_}dnn${layers}_finetune.log"
-  local ebDir="${DNN_EB_}${prefix_}dnn${layers}"
-  local hmmlist="$(readlink $HMMLIST)"
-  
-  # make epoch base dir
-  mkdir -p $ebDir
-  
-  HNTrainSGD -A -D -V -T 1 \
-    -eb $ebDir \
-    -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
-    -H $models -M $DIR/models \
-    -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
-    -l LABEL -I $DNN_TRAIN_ALIGNED_MLF \
-    "$hmmlist" > $logFile
-
-  if [ -z $TRIPHONE ]; then
-    echo $logFile >> "${DNN_HNTrainSGD}_dnn${layers}"
-  fi
-
-  # remove intermediate epoch
-  rm -rf "$ebDir"
-
-  # add dnn fine-tuned models to MODELS list
-  echo "$models:$hmmlist" >> $DIR/models/MODELS
+  run_in_queue __SGD_finetune $numLayers "$models"
 }
 
 # initialize triphone dnn with context independent (CI) initialization
@@ -466,7 +466,7 @@ triphone_dnn_finetune() {
       # clone $file for finetuning
       cp $file "$models"
       
-      run_in_queue TRIPHONE=yes __finetune_run $numLayers "$models"
+      run_in_queue TRIPHONE=yes __SGD_finetune $numLayers "$models"
     fi
   done < $DNN_TRIPHONE_PRETRAIN
   echo
