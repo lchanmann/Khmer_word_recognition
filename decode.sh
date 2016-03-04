@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # -----------------------------------
 # Project   : Khmer_word_recognition
@@ -10,6 +10,9 @@
 
 # exit on error
 set -e
+
+# include
+source ./process_queue.sh
 
 # E_VARS
 E_USAGE="Usage: $0 \$directory"
@@ -31,6 +34,10 @@ setup() {
   MFCLIST="$DIR/mfclist_tst"
 
   mkdir -p $DIR/results
+  
+  # setup queue
+  set_queue_DB $DIR/results/HVite.queue
+  set_max_queue 6
 
   # stdout
   echo "$SCRIPT_NAME -> setup()"
@@ -71,7 +78,7 @@ recognize() {
     mmf="$(echo $line | sed "s/:.*//")"
     hmmlist="$(echo $line | sed "s/.*://")"
     
-    viterbi_decode "$mmf" "$hmmlist" & 
+    run_in_queue viterbi_decode "$mmf" "$hmmlist" 
   done < $DIR/models/MODELS
   
   # small delay to let HVite processes kickoff

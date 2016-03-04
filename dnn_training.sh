@@ -64,6 +64,7 @@ setup() {
   
   # setup queue database
   set_queue_DB $DNN_HNTrainSGD.queue
+  set_max_queue 2
   
   # reset decoding models list
   cat /dev/null > "$DIR/models/MODELS"
@@ -85,7 +86,7 @@ __make_hte() {
 set FEATURETYPE=MFCC_0_D_A_Z
 set FEATUREDIM=39
 set CONTEXTSHIFT=-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6  # Input feature context shift
-set DNNSTRUCTURE=351X${DNN_HIDDEN_NODES}X180  # 3-layer MLP structure (351 = 39 * 9), BN dim = 39
+set DNNSTRUCTURE=507X${DNN_HIDDEN_NODES}X180  # 3-layer MLP structure (507 = 39 * 13), BN dim = 39
 set HIDDENACTIVATION=${DNN_HIDDEN_ACTIVATION}  # Hidden layer activation function
 set OUTPUTACTIVATION=SOFTMAX  # Softmax output activation function
 _EOF_
@@ -208,8 +209,8 @@ __SGD_training() {
   # add to PRETRAIN
   echo $pretrainedModels >> $DNN_PRETRAIN
   
-  # add pretrain models for evaluation
-  echo "$pretrainedModels:$(readlink $HMMLIST)" >> "$DIR/models/MODELS"
+  # to add pretrain models for evaluation uncomment below line
+  # echo "$pretrainedModels:$(readlink $HMMLIST)" >> "$DIR/models/MODELS"
 }
 
 # __SGD_finetune
@@ -488,7 +489,7 @@ wait_HNTrainSGD() {
 #   $2 : DNN_HIDDEN_NODES
 # ------------------------------------
 
-  setup experiments/today.dnn 800 "$@"
+  setup experiments/today.dnn 3072 "$@"
   dnn_init
   # holdout_split
   pretrain && finetune
