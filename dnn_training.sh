@@ -164,7 +164,7 @@ __SGD_training() {
     
     # models backup before traning
     cp $DNN_MODELS_MMF $__BEFORE_CONVERGED_MMF
-    HNTrainSGD -A -D -V -T 1 \
+    HNTrainSGD -A -D -T 1 \
       -C $DNN_BASIC_CONF -C configs/dnn_pretrain.conf \
       -H $DNN_MODELS_MMF -M $DIR/dnn \
       -S $DNN_TRAINING_SCP -N $DNN_HOLDOUT_SCP \
@@ -226,7 +226,7 @@ __SGD_finetune() {
   # make epoch base dir
   mkdir -p $ebDir
   
-  HNTrainSGD -A -D -V -T 1 \
+  HNTrainSGD -A -D -T 1 \
     -eb $ebDir \
     -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
     -H $models -M $DIR/models \
@@ -248,7 +248,7 @@ __SGD_finetune() {
 # state-to-frame alignment
 __state2frame_align() { 
   # viterbi force alignment
-  HVite -A -D -V \
+  HVite -A -D \
     -T 1 -a -l '*' -I labels/words.mlf -i $DNN_TRAIN_ALIGNED_MLF \
     -C configs/hvite.conf -f -o MW -b SIL -y lab \
     -S $MFCLIST -H $MODELS_MMF \
@@ -279,7 +279,7 @@ __copy_dnn_pretrain_params() {
   __make_copy_hed "$pretrainedModels" $numLayers > $DNN_COPY_HED
   
   # copy monophone dnn parameters -> triphone dnn
-  HHEd -A -D -V \
+  HHEd -A -D \
     -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
     $DNN_COPY_HED $HMMLIST \
     > $DIR/dnn/HHEd_copy_hed.log
@@ -312,7 +312,7 @@ dnn_init() {
   ln -sf "$PWD/$TIEDLIST" $HMMLIST
   
   # associate DNN and HMM
-  HHEd -A -D -V \
+  HHEd -A -D \
     -T 1 -H $MODELS_MMF -M $DIR/dnn \
     $DNN_CONNECT_HED $HMMLIST \
     > $DIR/dnn/HHEd_dnn_init.log
@@ -345,7 +345,7 @@ pretrain() {
   __make_basic_conf > $DNN_BASIC_CONF
 
   # compute global variance for unit variance normalization
-  HCompV -A -D -V -T 3 \
+  HCompV -A -D -T 3 \
     -k "*.%%%" -C configs/hcompv.conf \
     -q v -c $DNN_CVN \
     -S $MFCLIST > $DIR/dnn/HCompV_pretrain.log
@@ -380,7 +380,7 @@ add_hidden_layer() {
   __make_addlayer_hed $((layers ++)) $numOfNodes > $DIR/dnn/addlayer_${layers}.hed
   
   # add new layer macro to models
-  HHEd -A -D -V \
+  HHEd -A -D \
     -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
     $DIR/dnn/addlayer_${layers}.hed $HMMLIST \
     > $DIR/dnn/HHEd_add_hidden_layer.log
@@ -420,7 +420,7 @@ triphone_dnn_init() {
   cat /dev/null > $DNN_TRIPHONE_PRETRAIN
   
   # associate DNN3 prototype and triphone HMM
-  HHEd -A -D -V \
+  HHEd -A -D \
     -T 1 -H $MODELS_MMF -M $DIR/dnn \
     $DNN_CONNECT_HED $HMMLIST \
     > $DIR/dnn/HHEd_triphone_dnn_init.log
@@ -431,7 +431,7 @@ triphone_dnn_init() {
     # add a hidden layer to models
     local addLayer_hed="$DIR/dnn/addlayer_$layers.hed"
     if [ -f "$addLayer_hed" ]; then
-      HHEd -A -D -V \
+      HHEd -A -D \
         -T 1 -H $DNN_MODELS_MMF -M $DIR/dnn \
         $addLayer_hed $HMMLIST \
         > $DIR/dnn/HHEd_addLayer_hed.log
