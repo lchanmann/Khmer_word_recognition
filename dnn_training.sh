@@ -308,8 +308,8 @@ dnn_init() {
   __make_connect_hed > $DNN_CONNECT_HED
   
   # init dnn-hmm with monophone models
-  ln -sf "$PWD/$MONOPHONE_MMF" $MODELS_MMF
-  ln -sf "$PWD/$MONOLIST" $HMMLIST
+  ln -sf "$PWD/$TRIPHONE_MMF" $MODELS_MMF
+  ln -sf "$PWD/$TIEDLIST" $HMMLIST
   
   # associate DNN and HMM
   HHEd -A -D -V \
@@ -491,16 +491,16 @@ wait_HNTrainSGD() {
   setup "$@"
   dnn_init
   # holdout_split
-  pretrain
-  add_hidden_layer $DNN_HIDDEN_NODES
-  add_hidden_layer $DNN_HIDDEN_NODES
+  pretrain && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
+  add_hidden_layer $DNN_HIDDEN_NODES && finetune
   
-  # let monophone models finish tuning since triphone model will overwrite $DNN_TRAIN_ALIGNED_MLF
-  wait_HNTrainSGD
-
-  # triphone DNN-HMM
-  triphone_dnn_init
-  triphone_dnn_finetune
+  # # let monophone models finish tuning since triphone model will overwrite $DNN_TRAIN_ALIGNED_MLF
+  # wait_HNTrainSGD
+  #
+  # # triphone DNN-HMM
+  # triphone_dnn_init
+  # triphone_dnn_finetune
 
   # wait for finetuned triphone models before decoding
   wait_HNTrainSGD
