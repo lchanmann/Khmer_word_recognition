@@ -37,7 +37,7 @@ setup() {
   
   # setup queue
   set_queue_DB $DIR/results/HVite.queue
-  set_max_queue 6
+  set_max_queue 4
 
   # stdout
   echo "$SCRIPT_NAME -> setup()"
