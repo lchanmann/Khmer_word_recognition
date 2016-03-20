@@ -229,7 +229,7 @@ viterbi_align() {
   # viterbi alignment
   HVite -A -D -V \
     -T 1 -a -l '*' -I labels/words.mlf -i $PHONEME_WITH_ALIGNMENT_MLF \
-    -C configs/hvite.conf -m -b SIL -o SW -y lab \
+    -C configs/hvite_align.conf -m -b SIL -o SW -y lab \
     -S $MFCLIST -H $MODELS_MMF \
     dictionary/dictionary.dct.withsil $HMMLIST \
     > $DIR/models/hvite_viterbi_align.log

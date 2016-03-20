@@ -34,14 +34,14 @@ setup() {
   MFCLIST="$DIR/mfclist_tst"
 
   mkdir -p $DIR/results
-  
+
   # setup queue
   set_queue_DB $DIR/results/HVite.queue
   set_max_queue 4
 
   # stdout
   echo "$SCRIPT_NAME -> setup()"
-  echo 
+  echo
 }
 
 # viterbi decoding
@@ -57,9 +57,10 @@ viterbi_decode() {
   local hvite_log="$DIR/results/hvite_${model_name}.$PID"
 
   # viterbi decoding
+  # NOTE: when copy HVite command directly into terminal '*' must be quoted.
   HVite -A -D -V \
     -T 1 -l '*' -i $DIR/results/output_${model_name}.mlf \
-    -C configs/hvite.conf -q Atvaldmnr -s 2.4 -p -1.2 \
+    -C $DIR/configs/hvite_decode.conf -q Atvaldmnr -s 2.4 -p -1.2 \
     -S $MFCLIST -H $models -w lm/word_network.lat \
     dictionary/dictionary.dct "$hmmlist" > $hvite_log
 
@@ -73,14 +74,14 @@ viterbi_decode() {
 recognize() {
   local mmf=
   local hmmlist=
-  
+
   while read line; do
     mmf="$(echo $line | sed "s/:.*//")"
     hmmlist="$(echo $line | sed "s/.*://")"
-    
-    run_in_queue viterbi_decode "$mmf" "$hmmlist" 
+
+    run_in_queue viterbi_decode "$mmf" "$hmmlist"
   done < $DIR/models/MODELS
-  
+
   # small delay to let HVite processes kickoff
   sleep 5
 }
@@ -95,7 +96,7 @@ show_progress() {
   local progressBar=
   local dot="...................................................................................................."
   local refreshInterval=2
-    
+
   while true; do
     current="$(cat $DIR/results/hvite_*.$PID | grep -c "^File:")"
     progress=$((current*100/total))
@@ -107,12 +108,12 @@ show_progress() {
 
     if [ "$progress" -eq "100" ]; then
       break; fi
-    
+
     sleep $refreshInterval
   done
-  
+
   # rename hvite log
-  rename "s/$PID$/log/" $DIR/results/hvite_*.$PID
+  rename -f "s/$PID$/log/" $DIR/results/hvite_*.$PID
 
   echo
   echo "Done!"
@@ -120,7 +121,7 @@ show_progress() {
 }
 
 # -----------------------------------
-# decode.sh - decode with viterbi algorithm 
+# decode.sh - decode with viterbi algorithm
 #             and generate hypothesis results
 #
 #   $1 : $DIR

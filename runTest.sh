@@ -39,6 +39,8 @@ setup() {
   if [ "$3" = "--rerun" ]; then
     FLAG_RERUN=1
   fi
+  
+  mkdir -p $DIR/configs
 
   # stdout
   echo "Setting up experiment:"
@@ -80,6 +82,9 @@ evaluate() {
   echo "Evaluation: $MODEL"
   echo
 
+  # clone hvite_decode.conf to $DIR
+  cp configs/hvite_decode.conf $DIR/configs/hvite_decode.conf
+  
   bash ./decode.sh $DIR
   echo
 }
