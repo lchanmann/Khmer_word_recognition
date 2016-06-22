@@ -42,10 +42,10 @@ setup() {
   DIR=$(dirname $1)
   PHONEME_MLF="$DIR/phoneme.mlf"
   TRIPHONE_MLF="$DIR/triphone.mlf"
-  PHONEME_WITH_ALIGNMENT_MLF="$DIR/phoneme_with_alignment.mlf"
+  PHONEME_WITH_ALIGNMENT_MLF="$DIR/aligned.mlf"
   MODELS_MMF="$DIR/models/models.mmf"
   MONOPHONE_MMF="$DIR/models/monophone.mmf"
-  STATSFILE="$DIR/khmer_triphone.sta"
+  STATSFILE="$DIR/khmer_triphone.stats"
   HMMLIST="$DIR/hmmlist"
   CDLIST="$DIR/cdlist"
   TIED_CDLIST="$DIR/tied_cdlist"
@@ -113,7 +113,7 @@ make_hed_files() {
   local au_command="AU ${CDLIST}_all"
   local st_command="ST $DIR/khmer_QS_and_tree"
   local co_command="CO $TIED_CDLIST"
-  local lt_command="LT $DIR/khmer_QS_and_tree"
+  # local lt_command="LT $DIR/khmer_QS_and_tree"
 
   # mktri.hed -> monophone to triphone
   perl pl/mktrihed.pl $HMMLIST $CDLIST > $MKTRI_HED

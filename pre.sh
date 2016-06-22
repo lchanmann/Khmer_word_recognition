@@ -38,8 +38,8 @@ echo '(!ENTER $word !EXIT)' >> dictionary/grammar
 HParse -A -D -V dictionary/grammar lm/word_network.lat > logs/hparse.log
 
 # # bigram language model generation
-# HLStats -T 1 -b lm/bigram.lm -o -t 1 dictionary/dictionary.wrd labels/words.mlf > logs/hlstats.log
-# HBuild -T 1 -n lm/bigram.lm dictionary/dictionary.wrd lm/bigram.lat > logs/hbuild.log
+HLStats -T 4 -b lm/bigram.lm -o -t 1 dictionary/dictionary.wrd labels/words.mlf > logs/hlstats.log
+HBuild -T 1 -n lm/bigram.lm dictionary/dictionary.wrd lm/bigram.lat > logs/hbuild.log
 
 # clean up
 rm -rf tmp/*

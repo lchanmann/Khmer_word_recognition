@@ -26,11 +26,15 @@ $ph{++$np} = 'sil';
 for ($i = 1; $i <= $np; $i++) {
 #	printf "%s\n", $ph{$i};
 	for ($j = 1; $j < $np; $j++) {
-		printf "%s-%s\n%s+%s\n", $ph{$i}, $ph{$j}, $ph{$j}, $ph{$i};
+    printf "%s-%s\n%s+%s\n", $ph{$i}, $ph{$j}, $ph{$j}, $ph{$i};
+    # $c = $c + 2;
 		for ($k = 1; $k <= $np; $k++) {
-		    printf "%s-%s+%s\n", $ph{$i}, $ph{$j}, $ph{$k};
+      printf "%s-%s+%s\n", $ph{$i}, $ph{$j}, $ph{$k};
+      #  ++$c;
 		}
 	}
 }
+
+# printf "%d\n", $c;
 
 close (DATFILE);

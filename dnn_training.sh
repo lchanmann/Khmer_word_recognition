@@ -87,7 +87,7 @@ __make_hte() {
 set FEATURETYPE=MFCC_0_D_A_Z
 set FEATUREDIM=39
 set CONTEXTSHIFT=-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7  # Input feature context shift
-set DNNSTRUCTURE=585X${DNN_HIDDEN_NODES}X180  # 3-layer MLP structure (585 = 39 * 13), BN dim = 39
+set DNNSTRUCTURE=585X${DNN_HIDDEN_NODES}X180  # 3-layer MLP structure (585 = 39 * 15), BN dim = 39
 set HIDDENACTIVATION=${DNN_HIDDEN_ACTIVATION}  # Hidden layer activation function
 set OUTPUTACTIVATION=SOFTMAX  # Softmax output activation function
 _EOF_
@@ -238,7 +238,7 @@ __SGD_finetune() {
   # make epoch base dir
   mkdir -p $ebDir
   
-  HNTrainSGD -T 1 \
+  HNTrainSGD -A -T 1 \
     -eb $ebDir \
     -C $DNN_BASIC_CONF -C configs/dnn_finetune.conf \
     -H $models -M $DIR/models \
@@ -411,7 +411,7 @@ add_hidden_layer() {
 # finetune
 finetune() {
   cat /dev/null > "$DIR/models/MODELS"
-  cp $DIR/dnn/dnn3_pretrain.mmf $DNN_MODELS_MMF
+  cp $DIR/dnn/dnn5_pretrain.mmf $DNN_MODELS_MMF
   
   echo "$SCRIPT_NAME -> finetune()"
   echo "  HNTrainSGD: y"
